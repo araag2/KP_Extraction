@@ -1,5 +1,7 @@
 import os, os.path
 import json
+
+from dataset_utils import *
 from typing import List
 from typing import Tuple
 from bs4 import BeautifulSoup
@@ -40,18 +42,19 @@ class DataSet:
         res = []
         
         if unsupervised:
-            dir_cont = os.listdir(dataset_dir)
+            p_data_path = "processed_data/DUC/unsupervised"
+            if os.path.isfile("{}.txt".format(p_data_path)):
+                print("Unsupervised processed data found")
+                return read_from_file(p_data_path)
 
+            dir_cont = os.listdir(dataset_dir)
             for subset in data_subset:
                 if subset in dir_cont:
                     subset_dir = "{}/{}".format(dataset_dir,subset)
                     
-                    #print("{}/references/{}.reader.json".format(dataset_dir, subset))
                     ref_file = open("{}/references/{}.reader.json".format(dataset_dir, subset))
                     refs = json.load(ref_file)
                     refs = [refs[item] for item in refs]
-                    refs = [r[0] for r in refs]
-                    print(refs)
 
                     for file, ref in zip(os.listdir(subset_dir), refs):
                         doc = ""
@@ -61,12 +64,9 @@ class DataSet:
                         for word in content:
                             doc += "{} ".format(word.get_text())
                         res.append((doc, [r[0] for r in ref]))
+            write_to_file(p_data_path, res)
 
-
-            #for file in os.listdir("{}/DUC".format(root_path):
-
-        
-        return ([""],[""])
+        return res
 
     def Inspec_dataset(self, unsupervised: bool = True) -> Tuple[List[str],List[List[str]]]:
         return ([""],[""])
