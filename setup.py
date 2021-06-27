@@ -9,6 +9,7 @@ base_packages = [
     "sentence-transformers>=0.3.8",
     "scikit-learn>=0.22.2",
     "numpy>=1.18.5",
+    "bs4>=0.0.1"
 ]
 
 docs_packages = [
