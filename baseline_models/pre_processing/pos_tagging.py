@@ -1,12 +1,14 @@
 import spacy
+from abc import ABC, abstractmethod
 
-from KP_Extraction.datasets.dataset_utils import write_to_file
-from KP_Extraction.baseline_models.embedrank.embedrank_utils import get_test_data
+from datasets.dataset_utils import write_to_file
+from baseline_models.embedrank.embedrank_utils import get_test_data
+from baseline_models.pre_processing.pre_processing_utils import simple_pre_process
 from typing import List
 from typing import Tuple
 
 
-def POS_tagger(ABC):
+class POS_tagger(ABC):
     """
     Abstract data class for POS tagging
     """
@@ -30,7 +32,7 @@ class POS_tagger_spacy(POS_tagger):
     Concrete data class for POS tagging using spacy
     """
     def __init__(self):
-        self.tagger = spacy.load("en_core_web_sm", entity=False)
+        self.tagger = spacy.load("en_core_web_sm")
 
     def pos_tag_text(self, text: str = ""):
         doc = self.tagger(text)
@@ -38,6 +40,6 @@ class POS_tagger_spacy(POS_tagger):
         return [[(token.text, token.tag_) for token in sent] for sent in doc.sents]
 
 
-doc = get_test_data()[0]
+doc = simple_pre_process(get_test_data()[0])
 
 print(POS_tagger_spacy().pos_tag_text(doc))

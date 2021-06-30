@@ -1,13 +1,15 @@
 import os, os.path
 import json
 
-from KP_Extraction.datasets.dataset_utils import read_from_file, write_to_file
+from datasets.dataset_utils import read_from_file, write_to_file
+from baseline_models.pre_processing.pos_tagging import *
 from typing import List, Tuple
 from bs4 import BeautifulSoup
 
 
 supported_datasets = ["DUC", "Inspec", "NUS", "PT-KP", "PubMed"]
-data_subset = ["train", "dev", "test"] 
+data_subset = ["train", "dev", "test"]
+print(globals()) 
 
 class DataSet:
     """
