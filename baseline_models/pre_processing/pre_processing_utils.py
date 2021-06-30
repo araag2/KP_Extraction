@@ -5,16 +5,14 @@ def remove_punctuation(text : str = "") -> str:
     """
     Quick snippet to remove punctuation marks
     """
-
-    text = re.sub("[-]", " ", text)
-    return re.sub("[.,;:\"\'!?`´()$£€]", " ", text)
+    return re.sub("[.,;:\"\'!?`´()$£€-]", " ", text)
 
 
 def remove_whitespaces(text : str = "") -> str:
     """
     Quick snippet to remove whitespaces
     """
-
+    text =  re.sub("\n", " ", text)
     return re.sub("\s{2,}", " ", text)
 
 
