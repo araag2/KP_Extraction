@@ -30,10 +30,10 @@ def remove_stopwords(text : str = "") -> str:
     return res[1:]
 
 
-def simple_pre_process(text : str = "") -> str:
+def embedrank_pre_process(text : str = "") -> str:
     """
     Quick snippet to perform pre-processing
     """
     text = remove_punctuation(text)
     text = remove_whitespaces(text)
-    return remove_stopwords(text)
+    return text[1:]

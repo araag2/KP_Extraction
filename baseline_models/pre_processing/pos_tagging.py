@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 from datasets.dataset_utils import write_to_file
 from baseline_models.embedrank.embedrank_utils import get_test_data
-from baseline_models.pre_processing.pre_processing_utils import simple_pre_process
+from baseline_models.pre_processing.pre_processing_utils import embedrank_pre_process
 from typing import List
 from typing import Tuple
 
@@ -34,12 +34,11 @@ class POS_tagger_spacy(POS_tagger):
     def __init__(self):
         self.tagger = spacy.load("en_core_web_sm")
 
-    def pos_tag_text(self, text: str = ""):
+    def pos_tag_text(self, text: str = "") -> List[List[Tuple]]:
         doc = self.tagger(text)
 
         return [[(token.text, token.tag_) for token in sent] for sent in doc.sents]
 
 
-doc = simple_pre_process(get_test_data()[0])
-
-print(POS_tagger_spacy().pos_tag_text(doc))
+#doc = simple_pre_process(get_test_data()[0])
+#print(POS_tagger_spacy().pos_tag_text(doc))
