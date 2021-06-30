@@ -1,6 +1,6 @@
 import pytest
 from keybert import KeyBERT
-from .embedrank_utils import get_test_data
+from KP_Extraction.baseline_models.embedrank.embedrank_utils import get_test_data
 from sklearn.feature_extraction.text import CountVectorizer
 
 doc_one, doc_two = get_test_data()

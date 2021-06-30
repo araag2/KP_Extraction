@@ -1,10 +1,10 @@
 import os, os.path
 import json
 
-from typing import List
-from typing import Tuple
+from KP_Extraction.datasets.dataset_utils import read_from_file, write_to_file
+from typing import List, Tuple
 from bs4 import BeautifulSoup
-from dataset_utils import *
+
 
 supported_datasets = ["DUC", "Inspec", "NUS", "PT-KP", "PubMed"]
 data_subset = ["train", "dev", "test"] 

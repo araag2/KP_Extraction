@@ -1,7 +1,7 @@
 import pytest
 import collections.abc
-from dataset_utils import *
-from process_datasets import *
+from KP_Extraction.datasets.dataset_utils import *
+from KP_Extraction.datasets.process_datasets import *
 
 def test_empty_none_dataset():
     """ Test invoking DataSet extraction with None parameter """
