@@ -1,12 +1,15 @@
+import sent2vec
 
-
+from re import search, escape
+from typing import List, Tuple, Set
 from nltk.stem import PorterStemmer
+from nltk import RegexpParser
+
 from keybert.backend._utils import select_backend
 from baseline_models.pre_processing.pos_tagging import POS_tagger_spacy
 from baseline_models.pre_processing.pre_processing_utils import embedrank_pre_process
 from baseline_models.embedrank.embedrank_utils import get_test_data
 
-from typing import List, Tuple, Set
 
 GRAMMAR_EN = """  NP:
              {<NN.*|JJ>*<NN.*>}  # Adjective(s)(optional) + Noun(s)"""
@@ -52,24 +55,51 @@ class EmbedRank:
 
         return tagged_doc
 
-    def extract_keywords_from_doc(self, doc : str = "", top_n: int = 5, min_len : int = 3, stemming : bool = True) -> List[Tuple]:
+    def extract_candidates(self, tagged_doc : List[List[Tuple]] = [], grammar : str = GRAMMAR_EN) -> List[str]:
         """
-        Method that extracts keywords from a given document, with optional arguments
+        Method that uses Regex patterns on POS tags to extract unique candidates from a tagged document
+        """
+        candidate_set = set()
+        parser = RegexpParser(GRAMMAR_EN)
+        np_trees = parser.parse_sents(tagged_doc)
+        
+        for tree in np_trees:
+            for subtree in tree.subtrees(filter = lambda t : t.label() == 'NP'):
+                candidate_set.add(' '.join(word for word, tag in subtree.leaves()))
+
+        candidate_set = {kp for kp in candidate_set if len(kp.split()) <= 5}
+
+        candidate_res = []
+        for s in sorted(candidate_set, key=len, reverse=True):
+            if not any(search(r'\b{}\b'.format(escape(s)), r) for r in candidate_res):
+                candidate_res.append(s)
+
+        return candidate_res
+
+    def top_n_candidates(self, doc : str = "", candidate_list : List[str] = [], top_n: int = 5, min_len : int = 3) -> List[Tuple]:
+        model = sent2vec.Sent2vecModel()
+        model.load_model("..\..\..\..\sent2vec_wiki_bigrams.bin")
+        print(model.embed(doc))
+        
+        return
+
+    def extract_kp_from_doc(self, doc : str = "", top_n: int = 5, min_len : int = 3, stemming : bool = True) -> List[Tuple]:
+        """
+        Method that extracts key-phrases from a given document, with optional arguments
         relevant to its specific functionality
         """
 
         tagged_doc = self.pos_tag_doc(doc, stemming)
-        candidate_set = self.get_candidate_set(tagged_doc, min_len)
-        # filtered_tagged_doc = [[(pair[0].lower(), pair[1]) for pair in sent if self.is_candidate(pair[1])] for sent in tagged_doc]
+        candidate_list = self.extract_candidates(tagged_doc, GRAMMAR_EN)
+        top_n = self.top_n_candidates(doc, candidate_list, top_n, min_len)
 
         return tagged_doc
 
-    def extract_keywords_from_corpus(self, corpus : List[str] = "", top_n: int = 5, stemming : bool = True) -> List[List[Tuple]]:
+    def extract_kp_from_corpus(self, corpus : List[str] = "", top_n: int = 5, stemming : bool = True) -> List[List[Tuple]]:
         """
-        Method that extracts keywords from a list of given document, with optional arguments
+        Method that extracts key-phrases from a list of given documents, with optional arguments
         relevant to its specific functionality
         """
         pass
 
-
-print(EmbedRank("test").extract_keywords_from_doc(get_test_data()[0]))
+EmbedRank("test").extract_kp_from_doc(get_test_data()[0])

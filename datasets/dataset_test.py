@@ -1,6 +1,6 @@
 import pytest
 import collections.abc
-from datasets.dataset_utils import *
+from utils.IO import *
 from datasets.process_datasets import *
 
 def test_empty_none_dataset():

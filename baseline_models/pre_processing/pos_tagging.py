@@ -1,7 +1,7 @@
 import spacy
 from abc import ABC, abstractmethod
 
-from datasets.dataset_utils import write_to_file
+from utils.IO import write_to_file
 from baseline_models.embedrank.embedrank_utils import get_test_data
 from baseline_models.pre_processing.pre_processing_utils import embedrank_pre_process
 from typing import List
@@ -38,7 +38,3 @@ class POS_tagger_spacy(POS_tagger):
         doc = self.tagger(text)
 
         return [[(token.text, token.tag_) for token in sent] for sent in doc.sents]
-
-
-#doc = simple_pre_process(get_test_data()[0])
-#print(POS_tagger_spacy().pos_tag_text(doc))

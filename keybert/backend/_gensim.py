@@ -4,7 +4,6 @@ from typing import List
 from keybert.backend import BaseEmbedder
 from gensim.models.keyedvectors import Word2VecKeyedVectors
 
-
 class GensimBackend(BaseEmbedder):
     """ Gensim Embedding Model
 
