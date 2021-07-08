@@ -1,15 +1,12 @@
 import os, os.path
 import json
 
-from datasets.dataset_utils import read_from_file, write_to_file
-from baseline_models.pre_processing.pos_tagging import *
 from typing import List, Tuple
 from bs4 import BeautifulSoup
 
-
-supported_datasets = ["DUC", "Inspec", "NUS", "PT-KP", "PubMed"]
-data_subset = ["train", "dev", "test"]
-print(globals()) 
+from utils.IO import read_from_file, write_to_file
+from baseline_models.pre_processing.pos_tagging import *
+from datasets.config import DATASET_DIR
 
 class DataSet:
     """
@@ -30,10 +27,12 @@ class DataSet:
         """
 
         self.dataset_content = {}
+        self.supported_datasets = ["DUC", "Inspec", "NUS", "PT-KP", "PubMed"]
+        self.data_subset = ["train", "dev", "test"]
 
         for dataset in datasets:
-            if dataset not in supported_datasets:
-                raise ValueError("Requested datset {} is not in the implemented set {}".format(dataset, supported_datasets))
+            if dataset not in self.supported_datasets:
+                raise ValueError("Requested datset {} is not in the implemented set {}".format(dataset, self.supported_datasets))
         
             elif dataset == "DUC":
                 self.dataset_content[dataset] = self.DUC_dataset(unsupervised)
@@ -54,16 +53,16 @@ class DataSet:
                 self.dataset_content[dataset] = self.OpenKP_dataset(unsupervised)
             
     def extract_from_dataset(self, unsupervised: bool = True, dataset_name: str = "DUC", ref_suffix: str = "") -> List[Tuple[str,List[str]]]:
-        dataset_dir = "raw_data/{}".format(dataset_name)
+        dataset_dir = "{}/raw_data/{}".format(DATASET_DIR, dataset_name)
         res = []
         
         if unsupervised:
-            p_data_path = "processed_data/{}/{}_unsupervised_{}".format(dataset_name, dataset_name, ref_suffix)
+            p_data_path = "{}/processed_data/{}/{}_unsupervised_{}".format(DATASET_DIR, dataset_name, dataset_name, ref_suffix)
             if os.path.isfile("{}.txt".format(p_data_path)):
                 return read_from_file(p_data_path)
 
             dir_cont = os.listdir(dataset_dir)
-            for subset in data_subset:
+            for subset in self.data_subset:
                 if subset in dir_cont:
                     subset_dir = "{}/{}".format(dataset_dir,subset)
                     

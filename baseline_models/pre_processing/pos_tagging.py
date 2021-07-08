@@ -1,12 +1,10 @@
 import spacy
 from abc import ABC, abstractmethod
-
-from utils.IO import write_to_file
-from baseline_models.embedrank.embedrank_utils import get_test_data
-from baseline_models.pre_processing.pre_processing_utils import embedrank_pre_process
 from typing import List
 from typing import Tuple
 
+
+from utils.IO import write_to_file
 
 class POS_tagger(ABC):
     """

@@ -67,6 +67,7 @@ ipython_config.py
 # Environments
 .env
 .venv
+.vscode
 env/
 venv/
 ENV/
@@ -75,3 +76,6 @@ venv.bak/
 
 .idea
 .idea/
+
+# config
+config.py

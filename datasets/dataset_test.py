@@ -1,5 +1,5 @@
 import pytest
-import collections.abc
+
 from utils.IO import *
 from datasets.process_datasets import *
 
