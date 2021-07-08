@@ -11,6 +11,7 @@ from baseline_models.pre_processing.pos_tagging import POS_tagger_spacy
 from baseline_models.pre_processing.pre_processing_utils import remove_punctuation, remove_whitespaces
 from baseline_models.base_embedrank.base_embedrank_utils import get_test_data
 from datasets.process_datasets import *
+from evaluation.evaluation_tools import evaluate_kp_extraction, extract_doc_labels, extract_res_labels
 
 class BaseEmbedRank (BaseKPModel):
     """
@@ -79,6 +80,13 @@ class BaseEmbedRank (BaseKPModel):
         return candidate_score[:top_n]
 
 
-#dataset_obj = DataSet(["NUS"])
-#top_5_from_corpus = BaseEmbedRank("xlm-r-bert-base-nli-stsb-mean-tokens").extract_kp_from_corpus(dataset_obj.dataset_content["NUS"], 5, 3, True)
-#print(top_5_from_doc)
+dataset_obj = DataSet(["NUS", "DUC"])
+model = BaseEmbedRank("xlm-r-bert-base-nli-stsb-mean-tokens")
+#res = {}
+
+#for dataset in dataset_obj.dataset_content:
+#   print([dataset_obj.dataset_content[dataset][0]])
+#   res[dataset] = model.extract_kp_from_corpus([dataset_obj.dataset_content[dataset][0]], 5, 3, True)
+
+res = { "NUS": [( [("disperser", 0.0), ("banana", 0.0)], ["disperser", "distribution"])], "DUC" : [( [("oil spill", 0.0)], ["987-foot tanker exxon valdez", "banana"])]}
+evaluate_kp_extraction(extract_res_labels(res), extract_doc_labels(dataset_obj.dataset_content, 1), model.name, True)

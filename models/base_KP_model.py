@@ -36,7 +36,7 @@ class BaseKPModel:
         """
         pass
 
-    def extract_kp_from_doc(self, doc, top_n, min_len, stemming) -> List[Tuple]:
+    def extract_kp_from_doc(self, doc, top_n, min_len, stemming) -> Tuple[List[Tuple], List[str]]:
         """
         Concrete method that extracts key-phrases from a given document, with optional arguments
         relevant to its specific functionality
@@ -46,7 +46,7 @@ class BaseKPModel:
         candidate_list = self.extract_candidates(tagged_doc)
         top_n = self.top_n_candidates(doc, candidate_list, top_n, min_len)
 
-        return top_n
+        return (top_n, candidate_list)
 
     def extract_kp_from_corpus(self, corpus, top_n=5, min_len=0, stemming=True) -> List[List[Tuple]]:
         """

@@ -27,11 +27,14 @@ def test_extract_kp_single_doc(top_n):
 
     assert isinstance(model, BaseEmbedRank)
     
-    assert isinstance(kp, list)
-    assert isinstance(kp[0], tuple)
-    assert isinstance(kp[0][0], str)
-    assert isinstance(kp[0][1], numpy.floating)
-    assert len(kp) == top_n
+    assert isinstance(kp, tuple)
+    assert isinstance(kp[0], list)
+    assert isinstance(kp[0][0], tuple)
+    assert isinstance(kp[0][0][0], str)
+    assert isinstance(kp[0][0][1], numpy.floating)
+    assert isinstance(kp[1], list)
+    assert isinstance(kp[1][0], str)
+    assert len(kp[0]) == top_n
 
 
 @pytest.mark.parametrize("top_n", [1, 2, 3, 4, 5])
@@ -46,8 +49,11 @@ def test_extract_kp_corpus(top_n):
     assert isinstance(kp, list)
 
     for i in range(2):
-        assert isinstance(kp[0], list)
-        assert isinstance(kp[0][0], tuple)
-        assert isinstance(kp[0][0][0], str)
-        assert isinstance(kp[0][0][1], numpy.floating)
-        assert len(kp[0]) == top_n
+        assert isinstance(kp[i], tuple)
+        assert isinstance(kp[i][0], list)
+        assert isinstance(kp[i][0][0], tuple)
+        assert isinstance(kp[i][0][0][0], str)
+        assert isinstance(kp[i][0][0][1], numpy.floating)
+        assert isinstance(kp[i][1], list)
+        assert isinstance(kp[i][1][0], str)
+        assert len(kp[i][0]) == top_n

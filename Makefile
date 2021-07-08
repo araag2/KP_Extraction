@@ -1,5 +1,5 @@
 test:
-	pytest
+	pytest -W ignore::DeprecationWarning
 
 install:
 	python -m pip install -e .
