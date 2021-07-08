@@ -3,13 +3,19 @@ import numpy as np
 from time import gmtime, strftime
 from evaluation.config import RESULT_DIR
 
-def extract_doc_labels(corpus_true_labels, n):
+def extract_dataset_labels(corpus_true_labels, n):
+    """
+    Code snippet to correctly format dataset true labels
+    """
     res = {}
     for dataset in corpus_true_labels:
         res[dataset] = [corpus_true_labels[dataset][i][1] for i in range(n)]
     return res
 
 def extract_res_labels(model_results):
+    """
+    Code snippet to correctly model results
+    """
     res = {}
     for dataset in model_results:        
         res[dataset] = []
@@ -18,7 +24,8 @@ def extract_res_labels(model_results):
     return res
 
 def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , write_to_file : bool = True) -> None:
-    res = "{} {} \n ------------- \n".format(strftime("%Y_%m_%d %H_%M", gmtime()), model_name)
+    stamp = "{} {}".format(strftime("%Y_%m_%d %H_%M", gmtime()), model_name)
+    res = "{}\n ------------- \n".format(stamp)
 
     for dataset in model_results:
         results_c = { 
@@ -27,7 +34,16 @@ def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , wr
                         "F1" : []
                     }
 
-        results_kp = {}
+        results_kp = {
+                        "MAP" : [],
+                        "nDCG" : []
+                     }
+
+        k_set = [3, 5, 7]
+        for k in k_set:
+            results_kp["Precision_{}".format(k)] = []
+            results_kp["Recall_{}".format(k)] = []
+            results_kp["F1_{}".format(k)] = []
 
         for i in range(len(model_results[dataset])):
             candidates = model_results[dataset][i][1]
@@ -52,8 +68,25 @@ def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , wr
             results_c["F1"].append(f1)
 
             # Precision_k, Recall_k, F1-Score_k, MAP and nDCG for KP
+            for k in k_set:
+                p_k = len([kp for kp in top_kp[:k] if kp in true_label]) / float(len(top_kp[:k]))
+                r_k = len([kp for kp in top_kp[:k] if kp in true_label]) / len_true_label
+                f1_k = 0.0
 
+                if p_k != 0 and r_k != 0:
+                    f1_k = ( 2.0 * p_k * r_k ) / ( p_k + r_k)
+                
+                results_kp["Precision_{}".format(k)].append(p_k)
+                results_kp["Recall_{}".format(k)].append(r_k)
+                results_kp["F1_{}".format(k)].append(f1_k)
 
+            ap = [ len( [ k for k in top_kp[:p] if k in true_label ] ) / float( p ) for p in range(1,len(top_kp) + 1) if top_kp[p - 1] in true_label ]
+            map = np.sum(ap) / float( len( true_label ) )
+            ndcg = np.sum( [ 1.0 / np.log2(p + 1) for p in range(1,len(top_kp) + 1) if top_kp[p - 1] in true_label ] )
+            ndcg = ndcg / np.sum( [ 1.0 / np.log2(p + 1) for p in range(1,len(true_label) + 1) ] )
+
+            results_kp["MAP"].append(map)	
+            results_kp["nDCG"].append(ndcg)	
 
         res += "\nResults for Dataset {}\n --- \n".format(dataset)
 
@@ -63,9 +96,13 @@ def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , wr
             res += "{} = {:.3f}%\n".format(result, np.mean(results_c[result])*100)
 
         # KP results, in Precision_k, Recall_k, F1-Score_k, MAP and nDCG for KP
-        res += "\nKP Ranking Evalution: \n\n"
-        print(res)
+        res += "\nKP Ranking Evalution: \n"
+        for result in results_kp:
+            res += "{} = {:.3f}%\n".format(result, np.mean(results_kp[result])*100)
         
+    if write_to_file:
+        with open("{}\{} raw.txt".format(RESULT_DIR, stamp), "a") as f:
+            f.write(res.rstrip())
 
-
-    return
+    print(res)
+    return 
