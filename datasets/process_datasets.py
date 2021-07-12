@@ -102,10 +102,3 @@ class DataSet:
 
     def OpenKP_dataset(self, unsupervised: bool = True) -> Tuple[List[str],List[List[str]]]:
         return ([""],[""])
-
-
-#print(len(DataSet(["DUC"], True).dataset_content["DUC"]))
-#print(len(DataSet(["Inspec"], True).dataset_content["Inspec"]))
-#print(len(DataSet(["NUS"], True).dataset_content["NUS"]))
-#print(len(DataSet(["PT-KP"], True).dataset_content["PT-KP"]))
-#print(len(DataSet(["PubMed"], True).dataset_content["PubMed"]))

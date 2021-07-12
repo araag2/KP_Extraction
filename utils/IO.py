@@ -1,6 +1,6 @@
 import pickle
 
-def write_to_file(filename, con):
+def write_to_file(filename : str = "", con : dict = {}):
     """
     Small auxiliary function to write data to a file
     """
@@ -8,7 +8,7 @@ def write_to_file(filename, con):
         pickle.dump(con, write_f)
     return
 
-def read_from_file(filename):
+def read_from_file(filename : str = ""):
     """
     Small auxiliary function to read data from a file
     """

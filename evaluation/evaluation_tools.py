@@ -1,7 +1,9 @@
+from os import write
 import numpy as np
 
 from time import gmtime, strftime
 from evaluation.config import RESULT_DIR
+from utils.IO import write_to_file
 
 def extract_dataset_labels(corpus_true_labels, n):
     """
@@ -23,9 +25,10 @@ def extract_res_labels(model_results):
             res[dataset].append( ([kp[0] for kp in doc[0]], doc[1])) 
     return res
 
-def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , write_to_file : bool = True) -> None:
+def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , save : bool = True) -> None:
     stamp = "{} {}".format(strftime("%Y_%m_%d %H_%M", gmtime()), model_name)
     res = "{}\n ------------- \n".format(stamp)
+    res_dic = {}
 
     for dataset in model_results:
         results_c = { 
@@ -99,10 +102,20 @@ def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , wr
         res += "\nKP Ranking Evalution: \n"
         for result in results_kp:
             res += "{} = {:.3f}%\n".format(result, np.mean(results_kp[result])*100)
+
+        if save:
+
+            res_dic[dataset] = {}
+            for (name, dic) in [("candidates", results_c), ("kp", results_kp)]:
+
+                res_dic[name] = {}
+                for measure in dic:
+                    res_dic[name][measure] = dic[measure]
         
-    if write_to_file:
-        with open("{}\{} raw.txt".format(RESULT_DIR, stamp), "a") as f:
+    if save:
+        with open("{}/raw/{} raw.txt".format(RESULT_DIR, stamp), "a") as f:
             f.write(res.rstrip())
+        write_to_file("{}/struct/{}.txt".format(RESULT_DIR, stamp), res_dic)
 
     print(res)
     return 
