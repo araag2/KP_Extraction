@@ -79,3 +79,6 @@ venv.bak/
 
 # config
 config.py
+
+# results
+results/
