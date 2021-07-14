@@ -42,9 +42,9 @@ class BaseKPModel:
         relevant to its specific functionality
         """
 
-        tagged_doc = self.pos_tag_doc(doc, stemming, **kwargs)
+        tagged_doc = self.pos_tag_doc(doc, **kwargs)
         candidate_list = self.extract_candidates(tagged_doc, **kwargs)
-        top_n = self.top_n_candidates(doc, candidate_list, top_n, min_len, **kwargs)
+        top_n = self.top_n_candidates(doc, candidate_list, top_n, min_len, stemming, **kwargs)
         print("doc finished\n")
         return (top_n, candidate_list)
 
