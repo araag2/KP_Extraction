@@ -78,20 +78,22 @@ class EmbedRank (BaseKPModel):
         if "MMR" not in kwargs:
             doc_sim = np.absolute(cosine_similarity(candidate_embedding, doc_embedding.reshape(1, -1)))
         else:
-            doc_sim = mmr(doc_embedding.reshape(1, -1), candidate_embedding, candidate_list, top_n, kwargs["MMR"])
+            n = len(candidate_list) if len(candidate_list) < top_n else top_n
+            doc_sim = mmr(doc_embedding.reshape(1, -1), candidate_embedding, candidate_list, n, kwargs["MMR"])
 
         candidate_score = sorted([(candidate_list[i], doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
 
         return candidate_score[:top_n]
 
-
-dataset_obj = DataSet(["NUS"])
+dataset_obj = DataSet(["PubMed"])
 model = EmbedRank("xlm-r-bert-base-nli-stsb-mean-tokens")
 res = {}
 
 for dataset in dataset_obj.dataset_content:
-   res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][:1], 5, 3, True, MMR = 0.5)
-   evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content), model.name, True)
+   res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][:5], 7, 3, True, MMR = 0.5)
+
+evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content), model.name, True)
+
 
 #res = { "NUS": [( [("disperser", 0.0), ("banana", 0.0)], ["disperser", "distribution"])], "DUC" : [( [("oil spill", 0.0)], ["987-foot tanker exxon valdez", "banana"])]}
 #evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content, 1), model.name, True)
