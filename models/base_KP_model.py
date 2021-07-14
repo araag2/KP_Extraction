@@ -18,39 +18,39 @@ class BaseKPModel:
         """
         pass
 
-    def pos_tag_doc(self, doc, stemming) -> List[List[Tuple]]:
+    def pos_tag_doc(self, doc, stemming, **kwargs) -> List[List[Tuple]]:
         """
         Abstract method that handles POS_tagging of an entire document
         """
         pass
 
-    def extract_candidates(self, tagged_doc, grammar) -> List[str]:
+    def extract_candidates(self, tagged_doc, grammar, **kwargs) -> List[str]:
         """
         Abract method to extract all candidates
         """
         pass
 
-    def top_n_candidates(self, doc, candidate_list, top_n, min_len) -> List[Tuple]:
+    def top_n_candidates(self, doc, candidate_list, top_n, min_len, **kwargs) -> List[Tuple]:
         """
         Abstract method to retrieve top_n candidates
         """
         pass
 
-    def extract_kp_from_doc(self, doc, top_n, min_len, stemming) -> Tuple[List[Tuple], List[str]]:
+    def extract_kp_from_doc(self, doc, top_n, min_len, stemming, **kwargs) -> Tuple[List[Tuple], List[str]]:
         """
         Concrete method that extracts key-phrases from a given document, with optional arguments
         relevant to its specific functionality
         """
 
-        tagged_doc = self.pos_tag_doc(doc, stemming)
-        candidate_list = self.extract_candidates(tagged_doc)
-        top_n = self.top_n_candidates(doc, candidate_list, top_n, min_len)
-
+        tagged_doc = self.pos_tag_doc(doc, stemming, **kwargs)
+        candidate_list = self.extract_candidates(tagged_doc, **kwargs)
+        top_n = self.top_n_candidates(doc, candidate_list, top_n, min_len, **kwargs)
+        print("doc finished\n")
         return (top_n, candidate_list)
 
-    def extract_kp_from_corpus(self, corpus, top_n=5, min_len=0, stemming=True) -> List[List[Tuple]]:
+    def extract_kp_from_corpus(self, corpus, top_n=5, min_len=0, stemming=True, **kwargs) -> List[List[Tuple]]:
         """
         Concrete method that extracts key-phrases from a list of given documents, with optional arguments
         relevant to its specific functionality
         """
-        return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemming) for doc in corpus]
+        return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemming, **kwargs) for doc in corpus]

@@ -2,10 +2,10 @@ from typing import List
 import pytest
 import numpy
 
-from baseline_models.base_embedrank.base_embedrank_utils import get_test_data
+from models.models_utils import test_data
 from baseline_models.base_embedrank.base_embedrank_model import BaseEmbedRank
 
-doc_one, doc_two = get_test_data()
+doc_one, doc_two = test_data()
 
 def test_empty_doc():
     """ Test empty doc """

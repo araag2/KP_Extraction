@@ -5,7 +5,7 @@ from typing import List, Tuple
 from bs4 import BeautifulSoup
 
 from utils.IO import read_from_file, write_to_file
-from baseline_models.pre_processing.pos_tagging import *
+from models.pre_processing.pos_tagging import *
 from datasets.config import DATASET_DIR
 
 class DataSet:

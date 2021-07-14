@@ -5,13 +5,13 @@ from time import gmtime, strftime
 from evaluation.config import RESULT_DIR
 from utils.IO import write_to_file
 
-def extract_dataset_labels(corpus_true_labels, n):
+def extract_dataset_labels(corpus_true_labels):
     """
     Code snippet to correctly format dataset true labels
     """
     res = {}
     for dataset in corpus_true_labels:
-        res[dataset] = [corpus_true_labels[dataset][i][1] for i in range(n)]
+        res[dataset] = [corpus_true_labels[dataset][i][1] for i in range(len(corpus_true_labels[dataset]))]
     return res
 
 def extract_res_labels(model_results):
