@@ -9,7 +9,8 @@ class BaseKPModel:
     """
 
     def __init__(self, model, name):
-        self.model = select_backend(model)
+        if model != "":
+            self.model = select_backend(model)
         self.name = "{}_{}".format(str(self.__str__).split()[3], re.sub("-", "_",model))
 
     def pre_process(self, doc) -> str:

@@ -1,6 +1,7 @@
 from os import write
 import numpy as np
 
+from nltk.stem import PorterStemmer
 from time import gmtime, strftime
 from evaluation.config import RESULT_DIR
 from utils.IO import write_to_file
@@ -9,20 +10,24 @@ def extract_dataset_labels(corpus_true_labels):
     """
     Code snippet to correctly format dataset true labels
     """
+    stemmer = PorterStemmer()
     res = {}
     for dataset in corpus_true_labels:
-        res[dataset] = [corpus_true_labels[dataset][i][1] for i in range(len(corpus_true_labels[dataset]))]
+        res[dataset] = []
+        for i in range(len(corpus_true_labels[dataset])):
+            res[dataset].append([stemmer.stem(kp) for kp in corpus_true_labels[dataset][i][1]])
     return res
 
 def extract_res_labels(model_results):
     """
     Code snippet to correctly model results
     """
+    stemmer = PorterStemmer()
     res = {}
     for dataset in model_results:        
         res[dataset] = []
         for doc in model_results[dataset]:
-            res[dataset].append( ([kp[0] for kp in doc[0]], doc[1])) 
+            res[dataset].append( ([kp[0] for kp in doc[0]], [stemmer.stem(kp) for kp in doc[1]])) 
     return res
 
 def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , save : bool = True) -> None:
@@ -70,7 +75,7 @@ def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , sa
             results_c["Recall"].append(r)
             results_c["F1"].append(f1)
 
-            # Precision_k, Recall_k, F1-Score_k, MAP and nDCG for KP
+            # Precision_k, Recall_k, F1-Score_k, MAP and nDCG for KP 
             for k in k_set:
                 p_k = len([kp for kp in top_kp[:k] if kp in true_label]) / float(len(top_kp[:k]))
                 r_k = len([kp for kp in top_kp[:k] if kp in true_label]) / len_true_label
@@ -104,7 +109,6 @@ def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , sa
             res += "{} = {:.3f}%\n".format(result, np.mean(results_kp[result])*100)
 
         if save:
-
             res_dic[dataset] = {}
             for (name, dic) in [("candidates", results_c), ("kp", results_kp)]:
 
@@ -118,4 +122,58 @@ def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , sa
         write_to_file("{}/struct/{}.txt".format(RESULT_DIR, stamp), res_dic)
 
     print(res)
-    return 
+    return
+
+def evaluate_candidate_extraction(model_results, true_labels, model_name: str = "" , save : bool = True) -> None:
+    stamp = "{} {}".format(strftime("%Y_%m_%d %H_%M", gmtime()), model_name)
+    res = "{}\n ------------- \n".format(stamp)
+    res_dic = {}
+
+    for dataset in model_results:
+        results_c = { 
+                        "Precision" : [], 
+                        "Recall" : [],
+                        "F1" : []
+                    }
+
+        for i in range(len(model_results[dataset])):
+            candidates = model_results[dataset][i][1]
+            len_candidates = float(len(candidates))
+
+            true_label = true_labels[dataset][i]
+            len_true_label = float(len(true_label))
+
+            # Precision, Recall and F1-Score for candidates
+            p = len([kp for kp in candidates if kp in true_label]) / len_candidates
+            r = len([kp for kp in candidates if kp in true_label]) / len_true_label
+            f1 = 0.0
+
+            if p != 0 and r != 0:
+                f1 = ( 2.0 * p * r ) / ( p + r)
+
+            results_c["Precision"].append(p)
+            results_c["Recall"].append(r)
+            results_c["F1"].append(f1)
+
+        res += "\nResults for Dataset {}\n --- \n".format(dataset)
+
+        # Candidate results, in Precision, Recall and F1-Score
+        res += "Candidate Extraction Evalution: \n"
+        for result in results_c:
+            res += "{} = {:.3f}%\n".format(result, np.mean(results_c[result])*100)
+
+        if save:
+            res_dic[dataset] = {}
+            for (name, dic) in [("candidates", results_c)]:
+
+                res_dic[name] = {}
+                for measure in dic:
+                    res_dic[name][measure] = dic[measure]
+        
+    if save:
+        with open("{}/raw/{} raw.txt".format(RESULT_DIR, stamp), "a") as f:
+            f.write(res.rstrip())
+        write_to_file("{}/struct/{}.txt".format(RESULT_DIR, stamp), res_dic)
+
+    print(res)
+    return      
