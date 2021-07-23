@@ -23,8 +23,8 @@ class EmbedRank (BaseKPModel):
         super().__init__(model, str(self.__str__))
 
         self.tagger = POS_tagger_spacy()
-        self.grammar = """  NP:
-             {<NN.*|JJ>*<NN.*>}  # Adjective(s)(optional) + Noun(s)"""
+        self.grammar = """  NP: 
+        {<PROPN|NOUN|ADJ>*<PROPN|NOUN>+<ADJ>*}"""
 
 
     def pre_process(self, doc = "", **kwargs) -> str:
@@ -38,7 +38,7 @@ class EmbedRank (BaseKPModel):
         """
         Method that handles POS_tagging of an entire document, pre-processing or stemming it in the process
         """
-        return self.tagger.pos_tag_text(self.pre_process(doc))
+        return self.tagger.pos_tag_text(doc)
 
     def extract_candidates(self, tagged_doc : List[List[Tuple]] = [], **kwargs) -> List[str]:
         """
@@ -54,14 +54,14 @@ class EmbedRank (BaseKPModel):
 
         candidate_set = {kp for kp in candidate_set if len(kp.split()) <= 5}
 
-        candidate_res = []
-        for s in sorted(candidate_set, key=len, reverse=True):
-            if not any(search(r'\b{}\b'.format(escape(s)), r) for r in candidate_res):
-                candidate_res.append(s)
+        #candidate_res = []
+        #for s in sorted(candidate_set, key=len, reverse=True):
+            #if not any(search(r'\b{}\b'.format(escape(s)), r) for r in candidate_res):
+                #candidate_res.append(s)
 
-        return candidate_res
+        return list(candidate_set)
 
-    def top_n_candidates(self, doc : str = "", candidate_list : List[str] = [], top_n: int = 5, min_len : int = 3, stemming : bool = True, **kwargs) -> List[Tuple]:
+    def top_n_candidates(self, doc : str = "", candidate_list : List[str] = [], top_n: int = 5, min_len : int = 3, stemming : bool = False, **kwargs) -> List[Tuple]:
         doc_embedding = []
         candidate_embedding = []
 
@@ -90,10 +90,6 @@ model = EmbedRank("xlm-r-bert-base-nli-stsb-mean-tokens")
 res = {}
 
 for dataset in dataset_obj.dataset_content:
-   res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][:5], 7, 3, True, MMR = 0.5)
+   res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][:5], 7, 3, False, MMR = 0.5)
 
 evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content), model.name, True)
-
-
-#res = { "NUS": [( [("disperser", 0.0), ("banana", 0.0)], ["disperser", "distribution"])], "DUC" : [( [("oil spill", 0.0)], ["987-foot tanker exxon valdez", "banana"])]}
-#evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content, 1), model.name, True)

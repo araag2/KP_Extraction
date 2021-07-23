@@ -23,8 +23,8 @@ class CandidateExtract (BaseKPModel):
         super().__init__(model, str(self.__str__))
 
         self.tagger = POS_tagger_spacy()
-        self.grammar = """  NP:
-             {<NN.*|JJ>*<NN.*>}  # Adjective(s)(optional) + Noun(s)"""
+        self.grammar = """  NP: 
+        {<PROPN|NOUN|ADJ>*<PROPN|NOUN>+<ADJ>*}"""
 
     def pos_tag_doc(self, doc : str = "", stemming : bool = True, **kwargs) -> List[List[Tuple]]:
         """
@@ -46,12 +46,12 @@ class CandidateExtract (BaseKPModel):
 
         candidate_set = {kp for kp in candidate_set if len(kp.split()) <= 5}
 
-        candidate_res = []
-        for s in sorted(candidate_set, key=len, reverse=True):
-            if not any(search(r'\b{}\b'.format(escape(s)), r) for r in candidate_res):
-                candidate_res.append(s)
+        #candidate_res = []
+        #for s in sorted(candidate_set, key=len, reverse=True):
+            #if not any(search(r'\b{}\b'.format(escape(s)), r) for r in candidate_res):
+                #candidate_res.append(s)
 
-        return candidate_res
+        return list(candidate_set)
 
     def extract_kp_from_doc(self, doc, top_n, min_len, stemming, **kwargs) -> Tuple[List[Tuple], List[str]]:
         """
@@ -71,7 +71,7 @@ class CandidateExtract (BaseKPModel):
         """
         return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemming, **kwargs) for doc in corpus]
 
-dataset_obj = DataSet(["PubMed", "PubMed2"])
+dataset_obj = DataSet(["DUC", "Inspec", "NUS", "PubMed"])
 model = CandidateExtract("")
 res = {}
 

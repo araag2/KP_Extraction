@@ -64,8 +64,8 @@ def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , sa
             len_true_label = float(len(true_label))
 
             # Precision, Recall and F1-Score for candidates
-            p = len([kp for kp in candidates if kp in true_label]) / len_candidates
-            r = len([kp for kp in candidates if kp in true_label]) / len_true_label
+            p = min(1.0, len([kp for kp in candidates if kp in true_label]) / len_candidates)
+            r = min(1.0, len([kp for kp in candidates if kp in true_label]) / len_true_label)
             f1 = 0.0
 
             if p != 0 and r != 0:
@@ -77,8 +77,8 @@ def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , sa
 
             # Precision_k, Recall_k, F1-Score_k, MAP and nDCG for KP 
             for k in k_set:
-                p_k = len([kp for kp in top_kp[:k] if kp in true_label]) / float(len(top_kp[:k]))
-                r_k = len([kp for kp in top_kp[:k] if kp in true_label]) / len_true_label
+                p_k = min(1.0, len([kp for kp in top_kp[:k] if kp in true_label]) / float(len(top_kp[:k])))
+                r_k = min(1.0, len([kp for kp in top_kp[:k] if kp in true_label]) / len_true_label)
                 f1_k = 0.0
 
                 if p_k != 0 and r_k != 0:
@@ -144,8 +144,8 @@ def evaluate_candidate_extraction(model_results, true_labels, model_name: str = 
             len_true_label = float(len(true_label))
 
             # Precision, Recall and F1-Score for candidates
-            p = len([kp for kp in candidates if kp in true_label]) / len_candidates
-            r = len([kp for kp in candidates if kp in true_label]) / len_true_label
+            p = min(1.0, len([kp for kp in candidates if kp in true_label]) / len_candidates)
+            r = min(1.0, len([kp for kp in candidates if kp in true_label]) / len_true_label)
             f1 = 0.0
 
             if p != 0 and r != 0:
