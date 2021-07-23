@@ -71,9 +71,7 @@ class CandidateExtract (BaseKPModel):
         """
         return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemming, **kwargs) for doc in corpus]
 
-
-
-dataset_obj = DataSet(["PubMed"])
+dataset_obj = DataSet(["PubMed", "PubMed2"])
 model = CandidateExtract("")
 res = {}
 

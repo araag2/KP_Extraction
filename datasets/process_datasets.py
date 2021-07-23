@@ -27,7 +27,7 @@ class DataSet:
         """
 
         self.dataset_content = {}
-        self.supported_datasets = ["DUC", "Inspec", "NUS", "PT-KP", "PubMed"]
+        self.supported_datasets = ["DUC", "Inspec", "NUS", "PT-KP", "PubMed", "PubMed2"]
         self.data_subset = ["train", "dev", "test"]
 
         for dataset in datasets:
@@ -48,6 +48,9 @@ class DataSet:
 
             elif dataset == "PubMed":
                 self.dataset_content[dataset] = self.PubMed_dataset(unsupervised)
+
+            elif dataset == "PubMed2":
+                self.dataset_content[dataset] = self.PubMed2_dataset(unsupervised)
 
             elif dataset == "OpenKP":
                 self.dataset_content[dataset] = self.OpenKP_dataset(unsupervised)
@@ -75,10 +78,14 @@ class DataSet:
 
                         doc = ""
                         soup = BeautifulSoup(open("{}/{}".format(subset_dir,file)).read(), "xml")
-                        content = soup.find_all('word')
+                        content = soup.find_all('p') 
 
                         for word in content:
                             doc += "{} ".format(word.get_text())
+
+                        content = soup.find_all(['article-title ', 'title'])
+                        for word in content:
+                            doc += "{}. ".format(word.get_text())
 
                         res.append((doc, [r[0] for r in refs[file[:-4]]]))
 
@@ -99,6 +106,9 @@ class DataSet:
 
     def PubMed_dataset(self, unsupervised: bool = True) -> Tuple[List[str],List[List[str]]]:
         return self.extract_from_dataset(unsupervised, "PubMed", "author")
+
+    def PubMed2_dataset(self, unsupervised: bool = True) -> Tuple[List[str],List[List[str]]]:
+        return self.extract_from_dataset(unsupervised, "PubMed2", "author")
 
     def OpenKP_dataset(self, unsupervised: bool = True) -> Tuple[List[str],List[List[str]]]:
         return ([""],[""])
