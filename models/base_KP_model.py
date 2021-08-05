@@ -39,19 +39,14 @@ class BaseKPModel:
 
     def extract_kp_from_doc(self, doc, top_n, min_len, stemming, **kwargs) -> Tuple[List[Tuple], List[str]]:
         """
-        Concrete method that extracts key-phrases from a given document, with optional arguments
+        Abstract method that extracts key-phrases from a given document, with optional arguments
         relevant to its specific functionality
         """
-
-        tagged_doc = self.pos_tag_doc(doc, **kwargs)
-        candidate_list = self.extract_candidates(tagged_doc, **kwargs)
-        top_n = self.top_n_candidates(doc, candidate_list, top_n, min_len, stemming, **kwargs)
-        print("doc finished\n")
-        return (top_n, candidate_list)
+        pass
 
     def extract_kp_from_corpus(self, corpus, top_n=5, min_len=0, stemming=True, **kwargs) -> List[List[Tuple]]:
         """
         Concrete method that extracts key-phrases from a list of given documents, with optional arguments
         relevant to its specific functionality
         """
-        return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemming, **kwargs) for doc in corpus]
+        pass

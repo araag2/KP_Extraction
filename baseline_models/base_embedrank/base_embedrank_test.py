@@ -17,7 +17,6 @@ def test_empty_doc():
 
     assert isinstance(model, BaseEmbedRank)
 
-
 @pytest.mark.parametrize("top_n", [1, 2, 3, 4, 5])
 def test_extract_kp_single_doc(top_n):
     """ Test extraction of single document method """
@@ -38,7 +37,7 @@ def test_extract_kp_single_doc(top_n):
 
 
 @pytest.mark.parametrize("top_n", [1, 2, 3, 4, 5])
-def test_extract_kp_corpus(top_n):
+def extract_kp_corpus(top_n):
     """ Test extraction of two documents """
 
     model = BaseEmbedRank("xlm-r-bert-base-nli-stsb-mean-tokens")

@@ -3,7 +3,6 @@ import numpy as np
 from nltk import RegexpParser
 from nltk.stem import PorterStemmer
 from sklearn.metrics.pairwise import cosine_similarity
-from re import search, escape
 from typing import List, Tuple, Set
 
 from keybert.mmr import mmr
@@ -54,11 +53,6 @@ class EmbedRank (BaseKPModel):
 
         candidate_set = {kp for kp in candidate_set if len(kp.split()) <= 5}
 
-        #candidate_res = []
-        #for s in sorted(candidate_set, key=len, reverse=True):
-            #if not any(search(r'\b{}\b'.format(escape(s)), r) for r in candidate_res):
-                #candidate_res.append(s)
-
         return list(candidate_set)
 
     def top_n_candidates(self, doc : str = "", candidate_list : List[str] = [], top_n: int = 5, min_len : int = 3, stemming : bool = False, **kwargs) -> List[Tuple]:
@@ -85,11 +79,30 @@ class EmbedRank (BaseKPModel):
 
         return candidate_score[:top_n]
 
-dataset_obj = DataSet(["PubMed"])
-model = EmbedRank("xlm-r-bert-base-nli-stsb-mean-tokens")
-res = {}
+    def extract_kp_from_doc(self, doc, top_n, min_len, stemming, **kwargs) -> Tuple[List[Tuple], List[str]]:
+        """
+        Concrete method that extracts key-phrases from a given document, with optional arguments
+        relevant to its specific functionality
+        """
 
-for dataset in dataset_obj.dataset_content:
-   res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][:5], 7, 3, False, MMR = 0.5)
+        tagged_doc = self.pos_tag_doc(doc, **kwargs)
+        candidate_list = self.extract_candidates(tagged_doc, **kwargs)
+        top_n = self.top_n_candidates(doc, candidate_list, top_n, min_len, stemming, **kwargs)
+        return (top_n, candidate_list)
 
-evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content), model.name, True)
+    def extract_kp_from_corpus(self, corpus, top_n=5, min_len=0, stemming=True, **kwargs) -> List[List[Tuple]]:
+        """
+        Concrete method that extracts key-phrases from a list of given documents, with optional arguments
+        relevant to its specific functionality
+        """
+        return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemming, **kwargs) for doc in corpus]
+
+
+#dataset_obj = DataSet(["PubMed"])
+#model = EmbedRank("xlm-r-bert-base-nli-stsb-mean-tokens")
+#res = {}
+
+#for dataset in dataset_obj.dataset_content:
+   #res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], 7, 3, False, MMR = 0.5)
+
+#evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content), model.name, False)

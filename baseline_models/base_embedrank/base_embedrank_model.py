@@ -9,6 +9,7 @@ from typing import List, Tuple, Set
 from models.base_KP_model import BaseKPModel
 from models.pre_processing.pos_tagging import POS_tagger_spacy
 from models.pre_processing.pre_processing_utils import remove_punctuation, remove_whitespaces
+from models.models_utils import test_data
 from datasets.process_datasets import *
 from evaluation.evaluation_tools import evaluate_kp_extraction, extract_dataset_labels, extract_res_labels
 from keybert.mmr import mmr
@@ -23,8 +24,8 @@ class BaseEmbedRank (BaseKPModel):
         super().__init__(model, str(self.__str__))
 
         self.tagger = POS_tagger_spacy()
-        self.grammar = """  NP:
-             {<NN.*|JJ>*<NN.*>}  # Adjective(s)(optional) + Noun(s)"""
+        self.grammar = """  NP: 
+        {<PROPN|NOUN|ADJ>*<PROPN|NOUN>+<ADJ>*}"""
 
 
     def pre_process(self, doc = "", **kwargs) -> str:
@@ -38,7 +39,7 @@ class BaseEmbedRank (BaseKPModel):
         """
         Method that handles POS_tagging of an entire document, pre-processing or stemming it in the process
         """
-        return self.tagger.pos_tag_text(self.pre_process(doc))
+        return self.tagger.pos_tag_text(doc)
 
     def extract_candidates(self, tagged_doc : List[List[Tuple]] = [], **kwargs) -> List[str]:
         """
@@ -54,12 +55,12 @@ class BaseEmbedRank (BaseKPModel):
 
         candidate_set = {kp for kp in candidate_set if len(kp.split()) <= 5}
 
-        candidate_res = []
-        for s in sorted(candidate_set, key=len, reverse=True):
-            if not any(search(r'\b{}\b'.format(escape(s)), r) for r in candidate_res):
-                candidate_res.append(s)
-
-        return candidate_res
+        #candidate_res = []
+        #for s in sorted(candidate_set, key=len, reverse=True):
+            #if not any(search(r'\b{}\b'.format(escape(s)), r) for r in candidate_res):
+                #candidate_res.append(s)
+                
+        return list(candidate_set)
 
     def top_n_candidates(self, doc : str = "", candidate_list : List[str] = [], top_n: int = 5, min_len : int = 3, stemming : bool = True, **kwargs) -> List[Tuple]:
         doc_embedding = []
@@ -83,3 +84,21 @@ class BaseEmbedRank (BaseKPModel):
         candidate_score = sorted([(candidate_list[i], doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
 
         return candidate_score[:top_n]
+
+    def extract_kp_from_doc(self, doc, top_n, min_len, stemming, **kwargs) -> Tuple[List[Tuple], List[str]]:
+        """
+        Concrete method that extracts key-phrases from a given document, with optional arguments
+        relevant to its specific functionality
+        """
+
+        tagged_doc = self.pos_tag_doc(doc, **kwargs)
+        candidate_list = self.extract_candidates(tagged_doc, **kwargs)
+        top_n = self.top_n_candidates(doc, candidate_list, top_n, min_len, stemming, **kwargs)
+        return (top_n, candidate_list)
+
+    def extract_kp_from_corpus(self, corpus, top_n=5, min_len=0, stemming=True, **kwargs) -> List[List[Tuple]]:
+        """
+        Concrete method that extracts key-phrases from a list of given documents, with optional arguments
+        relevant to its specific functionality
+        """
+        return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemming, **kwargs) for doc in corpus]
