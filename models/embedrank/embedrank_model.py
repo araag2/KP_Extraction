@@ -9,10 +9,11 @@ from keybert.mmr import mmr
 from models.base_KP_model import BaseKPModel
 from models.pre_processing.pos_tagging import POS_tagger_spacy
 from models.pre_processing.pre_processing_utils import remove_punctuation, remove_whitespaces
+from models.pre_processing.document_abstraction import Document
 from datasets.process_datasets import *
 from evaluation.evaluation_tools import evaluate_kp_extraction, extract_dataset_labels, extract_res_labels
 
-class EmbedRank (BaseKPModel):
+class EmbedRank(BaseKPModel):
     """
     Simple class to encapsulate EmbedRank functionality. Uses
     the KeyBert backend to retrieve models
@@ -25,7 +26,6 @@ class EmbedRank (BaseKPModel):
         self.grammar = """  NP: 
         {<PROPN|NOUN|ADJ>*<PROPN|NOUN>+<ADJ>*}"""
 
-
     def pre_process(self, doc = "", **kwargs) -> str:
         """
         Method that defines a pre_processing routine, removing punctuation and whitespaces
@@ -33,29 +33,7 @@ class EmbedRank (BaseKPModel):
         doc = remove_punctuation(doc)
         return remove_whitespaces(doc)[1:]
 
-    def pos_tag_doc(self, doc : str = "", stemming : bool = True, **kwargs) -> List[List[Tuple]]:
-        """
-        Method that handles POS_tagging of an entire document, pre-processing or stemming it in the process
-        """
-        return self.tagger.pos_tag_text(doc)
-
-    def extract_candidates(self, tagged_doc : List[List[Tuple]] = [], **kwargs) -> List[str]:
-        """
-        Method that uses Regex patterns on POS tags to extract unique candidates from a tagged document
-        """
-        candidate_set = set()
-        parser = RegexpParser(self.grammar)
-        np_trees = parser.parse_sents(tagged_doc)
-        
-        for tree in np_trees:
-            for subtree in tree.subtrees(filter = lambda t : t.label() == 'NP'):
-                candidate_set.add(' '.join(word for word, tag in subtree.leaves()))
-
-        candidate_set = {kp for kp in candidate_set if len(kp.split()) <= 5}
-
-        return list(candidate_set)
-
-    def top_n_candidates(self, doc : str = "", candidate_list : List[str] = [], top_n: int = 5, min_len : int = 3, stemming : bool = False, **kwargs) -> List[Tuple]:
+    def top_n_candidates(self, doc : Document = None, candidate_list : List[str] = [], top_n: int = 5, min_len : int = 3, stemming : bool = False, **kwargs) -> List[Tuple]:
         doc_embedding = []
         candidate_embedding = []
 
@@ -84,11 +62,12 @@ class EmbedRank (BaseKPModel):
         Concrete method that extracts key-phrases from a given document, with optional arguments
         relevant to its specific functionality
         """
-
-        tagged_doc = self.pos_tag_doc(doc, **kwargs)
-        candidate_list = self.extract_candidates(tagged_doc, **kwargs)
-        top_n = self.top_n_candidates(doc, candidate_list, top_n, min_len, stemming, **kwargs)
-        return (top_n, candidate_list)
+        doc = Document(doc, self.tagger, self.grammar)
+        doc.pos_tag()
+        doc.extract_candidates()
+        
+        #top_n = self.top_n_candidates(doc, candidate_list, top_n, min_len, stemming, **kwargs)
+        #return (top_n, candidate_list)
 
     def extract_kp_from_corpus(self, corpus, top_n=5, min_len=0, stemming=True, **kwargs) -> List[List[Tuple]]:
         """
@@ -98,11 +77,9 @@ class EmbedRank (BaseKPModel):
         return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemming, **kwargs) for doc in corpus]
 
 
-#dataset_obj = DataSet(["PubMed"])
-#model = EmbedRank("xlm-r-bert-base-nli-stsb-mean-tokens")
-#res = {}
+dataset_obj = DataSet(["PubMed"])
+model = EmbedRank("xlm-r-bert-base-nli-stsb-mean-tokens")
+res = {}
 
-#for dataset in dataset_obj.dataset_content:
-   #res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], 7, 3, False, MMR = 0.5)
-
-#evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content), model.name, False)
+for dataset in dataset_obj.dataset_content:
+   res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:1], 7, 3, False, MMR = 0.5)
