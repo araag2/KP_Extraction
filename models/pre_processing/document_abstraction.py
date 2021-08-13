@@ -43,6 +43,7 @@ class Document:
         """
         Method that embeds the document, having several modes according to usage. 
         AvgPool embed each sentence seperately and takes the Avg of all embeddings as the final document result.
+        Segmented embeds the document in segments of up to 512 characters, pooling the Avg for doc representation.
         The default value just embeds the document normally.
         """
         stemmer = PorterStemmer() if stemming else None
@@ -55,7 +56,13 @@ class Document:
             self.doc_embed = np.mean(self.doc_sents_embed, axis=0)
 
         elif mode =="Segmented":
-            pass
+            segmented_doc = [self.raw_text[i:i+512] for i in range(0, len(self.raw_text), 512)]
+            segmented_doc_embeds = []
+
+            for sentence in segmented_doc:
+                 segmented_doc_embeds.append(model.embed(stemmer.stem(sentence)) if stemming else model.embed(sentence))
+
+            self.doc_embed = np.mean(segmented_doc_embeds, axis=0)
 
         else:
             self.doc_embed = model.embed(stemmer.stem(self.raw_text)) if stemming else model.embed(self.raw_text)
