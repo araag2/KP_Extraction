@@ -1,5 +1,6 @@
 import os, os.path
 import json
+import re
 
 from typing import List, Tuple
 from bs4 import BeautifulSoup
@@ -80,12 +81,13 @@ class DataSet:
                         soup = BeautifulSoup(open("{}/{}".format(subset_dir,file)).read(), "xml")
                         content = soup.find_all('p') 
 
+                        print("doc")
                         for word in content:
-                            doc += "{} ".format(word.get_text())
+                            doc += "{} ".format(re.sub(r'Figs?\.*\s*[0-9]*\.*', r'Fig ', word.get_text()))
 
                         content = soup.find_all(['article-title ', 'title'])
                         for word in content:
-                            doc += "{}. ".format(word.get_text())
+                            doc += "{}. ".format(re.sub(r'Figs?\.*\s*[0-9]*\.*', r'Fig ', word.get_text()))
 
                         res.append((doc, [r[0] for r in refs[file[:-4]]]))
 

@@ -9,23 +9,75 @@ from keybert.mmr import mmr
 
 class Document:
     """
-    Simple abstract class to encapsulate a documents representation
+    Simple abstract class to encapsulate document representation and functionality
     """
 
     def __init__(self, raw_text):
         """
         Stores the raw text representation of the doc, a pos_tagger and the grammar to
-        extract candidates with
+        extract candidates with.
+        
+        Attributes:
+            self.raw_text -> Raw text representation of the document
+            self.doc_sents -> Document in list form divided by sentences
+            self.tagged_text -> The entire document divided by sentences with POS tags in each word
+            self.candidate_set -> Set of candidates in list form, according to the supplied grammar
+            self.candidate_set_sents -> Lists of sentences where candidates occur in the document
+
+            self.doc_embed -> Document in embedding form
+            self.doc_sents_embed -> Document in list form divided by sentences, each sentenced in embedding form
+            self.candidate_set_embed -> Set of candidates in list form, according to the supplied grammar, in embedding form
         """
+
         self.raw_text = raw_text
         self.doc_sents = []
-
 
     def pos_tag(self, tagger):
         """
         Method that handles POS_tagging of an entire document, whilst storing it seperated by sentences
         """
         self.tagged_text, self.doc_sents = tagger.pos_tag_text_sents(self.raw_text)
+        self.doc_sents = [sent.text for sent in self.doc_sents if sent.text.strip()]
+
+    def embed_doc(self, model, stemming, mode: str = ""):
+        """
+        Method that embeds the document, having several modes according to usage. 
+        AvgPool embed each sentence seperately and takes the Avg of all embeddings as the final document result.
+        The default value just embeds the document normally.
+        """
+        stemmer = PorterStemmer() if stemming else None
+
+        if mode == "AvgPool":
+            self.doc_sents_embed = []
+            for sentence in self.doc_sents:
+                self.doc_sents_embed.append(model.embed(stemmer.stem(sentence)) if stemming else model.embed(sentence))
+
+            self.doc_embed = np.mean(self.doc_sents_embed, axis=0)
+
+        elif mode =="Segmented":
+            pass
+
+        else:
+            self.doc_embed = model.embed(stemmer.stem(self.raw_text)) if stemming else model.embed(self.raw_text)
+
+    def embed_candidates(self, model, stemming, mode: str = ""):
+        """
+        Method that embeds the current candidate set, having several modes according to usage. 
+        AvgPool embed each sentence seperately and takes the Avg of all embeddings of sentences where the candidate occurs.
+        The default value just embeds candidates directly.
+        """
+        stemmer = PorterStemmer() if stemming else None
+        self.candidate_set_embed = []
+
+        if mode == "AvgPool":
+            # TODO Use the correct info to calculate embeddings
+
+            for candidate in self.candidate_set:
+                self.candidate_set_embed.append(model.embed(stemmer.stem(candidate)) if stemming else model.embed(candidate))
+
+        else:
+            for candidate in self.candidate_set:
+                self.candidate_set_embed.append(model.embed(stemmer.stem(candidate)) if stemming else model.embed(candidate))
 
     def extract_candidates(self, min_len : int = 5, grammar : str = ""):
         """
@@ -51,24 +103,17 @@ class Document:
         self.candidate_sents = candidate_sents
 
     def top_n_candidates(self, model, top_n: int = 5, min_len : int = 3, stemming : bool = False, **kwargs) -> List[Tuple]:
-        doc_embedding = []
-        candidate_embedding = []
+       
+        mode = "" if "mode" not in kwargs else kwargs["mode"]
+        self.embed_doc(model, stemming, mode)
+        self.embed_candidates(model, stemming, mode)
 
-        if stemming:
-            stemmer = PorterStemmer()
-            doc_embedding = model.embed(stemmer.stem(self.raw_text))
-            candidate_embedding = [model.embed(stemmer.stem(candidate)) for candidate in self.candidate_set]
-        
-        else:
-            doc_embedding = model.embed(self.raw_text)
-            candidate_embedding = [model.embed(candidate.lower()) for candidate in self.candidate_set]
-        
         doc_sim = []
         if "MMR" not in kwargs:
-            doc_sim = np.absolute(cosine_similarity(candidate_embedding, doc_embedding.reshape(1, -1)))
+            doc_sim = np.absolute(cosine_similarity(self.candidate_set_embed, self.doc_embed.reshape(1, -1)))
         else:
             n = len(self.candidate_set) if len(self.candidate_set) < top_n else top_n
-            doc_sim = mmr(doc_embedding.reshape(1, -1), candidate_embedding, self.candidate_set, n, kwargs["MMR"])
+            doc_sim = mmr(self.doc_embed.reshape(1, -1), self.candidate_set_embed, self.candidate_set, n, kwargs["MMR"])
 
         candidate_score = sorted([(self.candidate_set[i], doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
 

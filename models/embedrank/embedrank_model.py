@@ -38,6 +38,7 @@ class EmbedRank(BaseKPModel):
         Concrete method that extracts key-phrases from a given document, with optional arguments
         relevant to its specific functionality
         """
+
         doc = Document(doc)
         doc.pos_tag(self.tagger)
         doc.extract_candidates(min_len, self.grammar)
@@ -58,6 +59,6 @@ model = EmbedRank("paraphrase-MiniLM-L6-v2")
 res = {}
 
 for dataset in dataset_obj.dataset_content:
-   res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:1], 7, 3, False, MMR = 0.5)
+   res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:1], 7, 3, False, mode = "AvgPool", MMR = 0.5)
 
 evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content), model.name, False)
