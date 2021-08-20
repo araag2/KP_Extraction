@@ -60,6 +60,6 @@ res = {}
 
 for dataset in dataset_obj.dataset_content:
    #res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:50], 5, 5, False, mode = "AvgPool", MMR = 0.5)
-   res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:1], 5, 5, False, mode = "AvgPool", MMR = 0.5)
+   res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:10], 5, 5, False, mode = "AvgPool", MMR = 0.5)
 
 evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content), model.name, False)

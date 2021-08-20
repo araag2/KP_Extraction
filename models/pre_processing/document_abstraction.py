@@ -21,6 +21,8 @@ class Document:
         Attributes:
             self.raw_text -> Raw text representation of the document
             self.doc_sents -> Document in list form divided by sentences
+            self.punctuation_regex -> regex that covers most punctuation and notation marks
+
             self.tagged_text -> The entire document divided by sentences with POS tags in each word
             self.candidate_set -> Set of candidates in list form, according to the supplied grammar
             self.candidate_set_sents -> Lists of sentences where candidates occur in the document
@@ -31,6 +33,7 @@ class Document:
         """
 
         self.raw_text = raw_text
+        self.punctuation_regex = "[!\"#\$%&'\(\)\*\+,\.\/:;<=>\?@\[\]\^_`{\|}~\-\–\—\‘\’\“\”]"
         self.doc_sents = []
 
     def pos_tag(self, tagger):
@@ -71,9 +74,11 @@ class Document:
         # Code snippet to remove punctuation and store words per sentence and word embeddings
         self.doc_sents_words = []
         self.doc_sents_words_embed = []
+        whitepace_str = ' '*len(self.punctuation_regex)
+
         for sentence in self.doc_sents:
-           sentence = sentence.translate(str.maketrans('', '', "!\"#$%&'()*+,./:;<=>?@[\]^_`{|}~")).split(" ")
-           self.doc_sents_words = sentence
+           sentence = sentence.translate(sentence.maketrans(self.punctuation_regex, whitepace_str)).split()
+           self.doc_sents_words.append(sentence)
            self.doc_sents_words_embed.append(model.embed(stemmer.stem(sentence)) if stemming else model.embed(sentence))
 
     def embed_candidates(self, model, stemming, mode: str = ""):
@@ -86,24 +91,25 @@ class Document:
         self.candidate_set_embed = []
 
         if mode == "AvgPool":
-
             for candidate in self.candidate_set:
+
+                # TODO Change this
                 embedding_list = []
+                split_candidate = re.sub(self.punctuation_regex, " ", candidate).split()  
+                word_range = len(split_candidate)
 
                 for sentence in self.candidate_sents[candidate]:
                     
-                    # TODO Keep this for now
-                    if not re.search(candidate, self.doc_sents[sentence]):
-                        print("Error in sentece {} with candidate {}".format(sentence, candidate))
-                        print(self.doc_sents[sentence] + "\n")
-                
                     # TODO Find which positions to average
-                    print(self.doc_sents[sentence])
-                    print(self.doc_sents_words_embed[sentence].shape)
-                    embedding_list.append(self.doc_sents_words_embed[sentence].shape)
+                    for i, x in enumerate(self.doc_sents_words[sentence]):
+                        if x == split_candidate[0] and not word_range or split_candidate == self.doc_sents_words[sentence][i : i + word_range]:
+                            for j in range(word_range):
+                                embedding_list.append(self.doc_sents_words_embed[sentence][i+j])
 
+                    if embedding_list == []:
+                        print("Error in candidate detection \n  candidate = {}\n  split candidate = {}\n  split sentence = {} \n".format(candidate, split_candidate, self.doc_sents_words[sentence]))
 
-                self.candidate_set_embed.append(model.embed(stemmer.stem(candidate)) if stemming else model.embed(candidate))
+                self.candidate_set_embed.append(np.mean(embedding_list, axis=0))
 
         else:
             for candidate in self.candidate_set:
@@ -125,9 +131,9 @@ class Document:
 
                 if len(candidate) >= min_len:
                     if candidate not in candidate_sents:
-                        candidate_sents[candidate] = [i]
+                        candidate_sents[candidate] = {i}
                     else:
-                        candidate_sents[candidate].append(i)
+                        candidate_sents[candidate].add(i)
 
         self.candidate_set = list(candidate_sents.keys())
         self.candidate_sents = candidate_sents
