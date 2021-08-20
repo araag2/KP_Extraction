@@ -40,7 +40,8 @@ class Document:
         """
         Method that handles POS_tagging of an entire document, whilst storing it seperated by sentences
         """
-        self.tagged_text, self.doc_sents = tagger.pos_tag_text_sents(self.raw_text)
+        self.tagged_text, self.doc_sents, self.doc_sents_words = tagger.pos_tag_text_sents_words(self.raw_text)
+        print(self.doc_sents_words)
         self.doc_sents = [sent.text for sent in self.doc_sents if sent.text.strip()]
 
     def embed_doc(self, model, stemming, mode: str = ""):
@@ -71,15 +72,11 @@ class Document:
         else:
             self.doc_embed = model.embed(stemmer.stem(self.raw_text)) if stemming else model.embed(self.raw_text)
 
-        # Code snippet to remove punctuation and store words per sentence and word embeddings
-        self.doc_sents_words = []
+        # Code to store words per sentence
         self.doc_sents_words_embed = []
-        whitepace_str = ' '*len(self.punctuation_regex)
 
-        for sentence in self.doc_sents:
-           sentence = sentence.translate(sentence.maketrans(self.punctuation_regex, whitepace_str)).split()
-           self.doc_sents_words.append(sentence)
-           self.doc_sents_words_embed.append(model.embed(stemmer.stem(sentence)) if stemming else model.embed(sentence))
+        for i in range(len(self.doc_sents_words)):
+           self.doc_sents_words_embed.append(model.embed(stemmer.stem(self.doc_sents_words[i])) if stemming else model.embed(self.doc_sents_words[i]))
 
     def embed_candidates(self, model, stemming, mode: str = ""):
         """
@@ -93,14 +90,12 @@ class Document:
         if mode == "AvgPool":
             for candidate in self.candidate_set:
 
-                # TODO Change this
                 embedding_list = []
-                split_candidate = re.sub(self.punctuation_regex, " ", candidate).split()  
+                split_candidate = candidate.split(" ")  
                 word_range = len(split_candidate)
 
                 for sentence in self.candidate_sents[candidate]:
                     
-                    # TODO Find which positions to average
                     for i, x in enumerate(self.doc_sents_words[sentence]):
                         if x == split_candidate[0] and not word_range or split_candidate == self.doc_sents_words[sentence][i : i + word_range]:
                             for j in range(word_range):
@@ -127,7 +122,7 @@ class Document:
 
         for i in range(len(np_trees)):
             for subtree in np_trees[i].subtrees(filter = lambda t : t.label() == 'NP'):
-                candidate = re.sub(' - ','-', ' '.join(word for word, tag in subtree.leaves()))
+                candidate = ' '.join(word for word, tag in subtree.leaves())
 
                 if len(candidate) >= min_len:
                     if candidate not in candidate_sents:
