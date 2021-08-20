@@ -1,3 +1,4 @@
+import re
 import numpy as np
 
 from nltk import RegexpParser
@@ -25,7 +26,7 @@ class Document:
             self.candidate_set_sents -> Lists of sentences where candidates occur in the document
 
             self.doc_embed -> Document in embedding form
-            self.doc_sents_embed -> Document in list form divided by sentences, each sentenced in embedding form
+            self.doc_sents_words_embed -> Document in list form divided by sentences, each sentence in embedding form, word piece by word piece
             self.candidate_set_embed -> Set of candidates in list form, according to the supplied grammar, in embedding form
         """
 
@@ -42,18 +43,18 @@ class Document:
     def embed_doc(self, model, stemming, mode: str = ""):
         """
         Method that embeds the document, having several modes according to usage. 
-        AvgPool embed each sentence seperately and takes the Avg of all embeddings as the final document result.
-        Segmented embeds the document in segments of up to 512 characters, pooling the Avg for doc representation.
-        The default value just embeds the document normally.
+            AvgPool embed each sentence seperately and takes the Avg of all embeddings as the final document result.
+            Segmented embeds the document in segments of up to 512 characters, pooling the Avg for doc representation.
+            The default value just embeds the document normally.
         """
         stemmer = PorterStemmer() if stemming else None
 
         if mode == "AvgPool":
-            self.doc_sents_embed = []
+            doc_sents_embed = []
             for sentence in self.doc_sents:
-                self.doc_sents_embed.append(model.embed(stemmer.stem(sentence)) if stemming else model.embed(sentence))
+                doc_sents_embed.append(model.embed(stemmer.stem(sentence)) if stemming else model.embed(sentence))
 
-            self.doc_embed = np.mean(self.doc_sents_embed, axis=0)
+            self.doc_embed = np.mean(doc_sents_embed, axis=0)
 
         elif mode =="Segmented":
             segmented_doc = [self.raw_text[i:i+512] for i in range(0, len(self.raw_text), 512)]
@@ -67,19 +68,41 @@ class Document:
         else:
             self.doc_embed = model.embed(stemmer.stem(self.raw_text)) if stemming else model.embed(self.raw_text)
 
+        # Code snippet to remove punctuation and store words per sentence and word embeddings
+        self.doc_sents_words = []
+        self.doc_sents_words_embed = []
+        for sentence in self.doc_sents:
+           sentence = sentence.translate(str.maketrans('', '', "!\"#$%&'()*+,./:;<=>?@[\]^_`{|}~")).split(" ")
+           self.doc_sents_words = sentence
+           self.doc_sents_words_embed.append(model.embed(stemmer.stem(sentence)) if stemming else model.embed(sentence))
+
     def embed_candidates(self, model, stemming, mode: str = ""):
         """
         Method that embeds the current candidate set, having several modes according to usage. 
-        AvgPool embed each sentence seperately and takes the Avg of all embeddings of sentences where the candidate occurs.
-        The default value just embeds candidates directly.
+            AvgPool embed each sentence seperately and takes the Avg of all embeddings of sentences where the candidate occurs.
+            The default value just embeds candidates directly.
         """
         stemmer = PorterStemmer() if stemming else None
         self.candidate_set_embed = []
 
         if mode == "AvgPool":
-            # TODO Use the correct info to calculate embeddings
 
             for candidate in self.candidate_set:
+                embedding_list = []
+
+                for sentence in self.candidate_sents[candidate]:
+                    
+                    # TODO Keep this for now
+                    if not re.search(candidate, self.doc_sents[sentence]):
+                        print("Error in sentece {} with candidate {}".format(sentence, candidate))
+                        print(self.doc_sents[sentence] + "\n")
+                
+                    # TODO Find which positions to average
+                    print(self.doc_sents[sentence])
+                    print(self.doc_sents_words_embed[sentence].shape)
+                    embedding_list.append(self.doc_sents_words_embed[sentence].shape)
+
+
                 self.candidate_set_embed.append(model.embed(stemmer.stem(candidate)) if stemming else model.embed(candidate))
 
         else:
@@ -98,7 +121,7 @@ class Document:
 
         for i in range(len(np_trees)):
             for subtree in np_trees[i].subtrees(filter = lambda t : t.label() == 'NP'):
-                candidate = ' '.join(word for word, tag in subtree.leaves())
+                candidate = re.sub(' - ','-', ' '.join(word for word, tag in subtree.leaves()))
 
                 if len(candidate) >= min_len:
                     if candidate not in candidate_sents:
@@ -109,7 +132,7 @@ class Document:
         self.candidate_set = list(candidate_sents.keys())
         self.candidate_sents = candidate_sents
 
-    def top_n_candidates(self, model, top_n: int = 5, min_len : int = 3, stemming : bool = False, **kwargs) -> List[Tuple]:
+    def top_n_candidates(self, model, top_n: int = 5, min_len : int = 5, stemming : bool = False, **kwargs) -> List[Tuple]:
        
         mode = "" if "mode" not in kwargs else kwargs["mode"]
         self.embed_doc(model, stemming, mode)

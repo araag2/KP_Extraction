@@ -46,7 +46,7 @@ class EmbedRank(BaseKPModel):
 
         return (top_n, candidate_set)
 
-    def extract_kp_from_corpus(self, corpus, top_n=5, min_len=0, stemming=True, **kwargs) -> List[List[Tuple]]:
+    def extract_kp_from_corpus(self, corpus, top_n=5, min_len=5, stemming=True, **kwargs) -> List[List[Tuple]]:
         """
         Concrete method that extracts key-phrases from a list of given documents, with optional arguments
         relevant to its specific functionality
@@ -59,6 +59,7 @@ model = EmbedRank("paraphrase-MiniLM-L6-v2")
 res = {}
 
 for dataset in dataset_obj.dataset_content:
-   res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:1], 7, 3, False, mode = "AvgPool", MMR = 0.5)
+   #res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:50], 5, 5, False, mode = "AvgPool", MMR = 0.5)
+   res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:1], 5, 5, False, mode = "AvgPool", MMR = 0.5)
 
 evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content), model.name, False)

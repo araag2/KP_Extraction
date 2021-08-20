@@ -35,9 +35,9 @@ class POS_tagger_spacy(POS_tagger):
     def pos_tag_text(self, text: str = "") -> List[List[Tuple]]:
         doc = self.tagger(text)
 
-        return [[(token.text, token.pos_) for token in sent] for sent in doc.sents]
+        return [[(token.text, token.pos_) for token in sent] for sent in doc.sents if sent.text.strip()]
 
     def pos_tag_text_sents(self, text: str = "") -> List[List[Tuple]]:
         doc = self.tagger(text)
 
-        return ([[(token.text, token.pos_) for token in sent] for sent in doc.sents], list(doc.sents))
+        return ([[(token.text, token.pos_) for token in sent] for sent in doc.sents if sent.text.strip()], list(doc.sents))
