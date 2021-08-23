@@ -27,7 +27,7 @@ def extract_res_labels(model_results):
     for dataset in model_results:        
         res[dataset] = []
         for doc in model_results[dataset]:
-            res[dataset].append( ([kp[0] for kp in doc[0]], [stemmer.stem(kp) for kp in doc[1]])) 
+            res[dataset].append( ([stemmer.stem(kp[0]) for kp in doc[0]], [stemmer.stem(kp) for kp in doc[1]])) 
     return res
 
 def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , save : bool = True) -> None:

@@ -41,7 +41,6 @@ class Document:
         Method that handles POS_tagging of an entire document, whilst storing it seperated by sentences
         """
         self.tagged_text, self.doc_sents, self.doc_sents_words = tagger.pos_tag_text_sents_words(self.raw_text)
-        print(self.doc_sents_words)
         self.doc_sents = [sent.text for sent in self.doc_sents if sent.text.strip()]
 
     def embed_doc(self, model, stemming, mode: str = ""):
