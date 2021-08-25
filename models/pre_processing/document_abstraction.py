@@ -43,7 +43,7 @@ class Document:
         self.tagged_text, self.doc_sents, self.doc_sents_words = tagger.pos_tag_text_sents_words(self.raw_text)
         self.doc_sents = [sent.text for sent in self.doc_sents if sent.text.strip()]
 
-    def embed_doc(self, model, stemming, mode: str = ""):
+    def embed_doc(self, model, stemming, doc_mode: str = ""):
         """
         Method that embeds the document, having several modes according to usage. 
             AvgPool embed each sentence seperately and takes the Avg of all embeddings as the final document result.
@@ -52,14 +52,23 @@ class Document:
         """
         stemmer = PorterStemmer() if stemming else None
 
-        if mode == "AvgPool":
+        if doc_mode == "AvgPool":
             doc_sents_embed = []
             for sentence in self.doc_sents:
                 doc_sents_embed.append(model.embed(stemmer.stem(sentence)) if stemming else model.embed(sentence))
 
             self.doc_embed = np.mean(doc_sents_embed, axis=0)
+        
+        if doc_mode == "WeightPool":
+            doc_sents_embed = []
+            weight_vec = []
+            for i in range(len(self.doc_sents)):
+                doc_sents_embed.append( model.embed(stemmer.stem(self.doc_sents[i])) if stemming else model.embed(self.doc_sents[i]))
+                weight_vec.append(1 / (i + 1 + 50))
 
-        elif mode =="Segmented":
+            self.doc_embed = np.average(doc_sents_embed, axis=0, weights = weight_vec)
+
+        elif doc_mode =="Segmented":
             segmented_doc = [self.raw_text[i:i+512] for i in range(0, len(self.raw_text), 512)]
             segmented_doc_embeds = []
 
@@ -77,7 +86,7 @@ class Document:
         for i in range(len(self.doc_sents_words)):
            self.doc_sents_words_embed.append(model.embed(stemmer.stem(self.doc_sents_words[i])) if stemming else model.embed(self.doc_sents_words[i]))
 
-    def embed_candidates(self, model, stemming, mode: str = ""):
+    def embed_candidates(self, model, stemming, cand_mode: str = ""):
         """
         Method that embeds the current candidate set, having several modes according to usage. 
             AvgPool embed each sentence seperately and takes the Avg of all embeddings of sentences where the candidate occurs.
@@ -86,28 +95,79 @@ class Document:
         stemmer = PorterStemmer() if stemming else None
         self.candidate_set_embed = []
 
-        if mode == "AvgPool":
+        if cand_mode == "AvgPool":
             for candidate in self.candidate_set:
 
-                embedding_list = []
                 split_candidate = candidate.split(" ")  
                 word_range = len(split_candidate)
+                embedding_list = [np.mean(model.embed(stemmer.stem(split_candidate)) if stemming else model.embed(split_candidate), axis=0)]
 
                 for sentence in self.candidate_sents[candidate]:
-                    
+                    sentence_embeds = []
+
                     for i, x in enumerate(self.doc_sents_words[sentence]):
                         if x == split_candidate[0] and not word_range or split_candidate == self.doc_sents_words[sentence][i : i + word_range]:
                             for j in range(word_range):
-                                embedding_list.append(self.doc_sents_words_embed[sentence][i+j])
+                                sentence_embeds.append(self.doc_sents_words_embed[sentence][i+j])
 
-                    if embedding_list == []:
-                        print("Error in candidate detection \n  candidate = {}\n  split candidate = {}\n  split sentence = {} \n".format(candidate, split_candidate, self.doc_sents_words[sentence]))
+                    if sentence_embeds == []:
+                        print(f'Error in candidate detection \n  candidate = {candidate}\n  split candidate = {split_candidate}\n  split sentence = {self.doc_sents_words[sentence]} \n')
+                    embedding_list.append(np.mean(sentence_embeds, axis=0))
+
+                self.candidate_set_embed.append(np.mean(embedding_list, axis=0))
+
+        elif cand_mode == "WeightPool":
+            for candidate in self.candidate_set:
+
+                split_candidate = candidate.split(" ")  
+                word_range = len(split_candidate)
+                embedding_list = [np.mean(model.embed(stemmer.stem(split_candidate)) if stemming else model.embed(split_candidate), axis=0)]
+                weight_vec = [1 / (1 + 50)]
+
+                for sentence in self.candidate_sents[candidate]:
+                    sentence_embeds = []
+
+                    for i, x in enumerate(self.doc_sents_words[sentence]):
+                        if x == split_candidate[0] and not word_range or split_candidate == self.doc_sents_words[sentence][i : i + word_range]:
+                            for j in range(word_range):
+                                sentence_embeds.append(self.doc_sents_words_embed[sentence][i+j])
+
+                    if sentence_embeds == []:
+                        print(f'Error in candidate detection \n  candidate = {candidate}\n  split candidate = {split_candidate}\n  split sentence = {self.doc_sents_words[sentence]} \n')
+                    
+                    weight_vec.append(1 / (sentence + 50))
+                    embedding_list.append(np.mean(sentence_embeds, axis=0))
+
+                self.candidate_set_embed.append(np.mean(embedding_list, axis=0, weights=weight_vec))
+
+        elif cand_mode == "AvgNormPool":
+            for candidate in self.candidate_set:
+
+                split_candidate = candidate.split(" ")  
+                word_range = len(split_candidate)
+                embedding_list = [np.mean(model.embed(stemmer.stem(split_candidate)) if stemming else model.embed(split_candidate), axis=0)]
+
+                for sentence in self.candidate_sents[candidate]:
+                    sentence_embeds = []
+                    weight_vec = []
+
+                    for i, x in enumerate(self.doc_sents_words[sentence]):
+                        if x == split_candidate[0] and not word_range or split_candidate == self.doc_sents_words[sentence][i : i + word_range]:
+                            for j in range(word_range):
+                                sentence_embeds.append(self.doc_sents_words_embed[sentence][i+j])
+                                weight_vec.append(np.linalg.norm(self.doc_sents_words_embed[sentence][i+j]))
+
+                    if sentence_embeds == []:
+                        print(f'Error in candidate detection \n  candidate = {candidate}\n  split candidate = {split_candidate}\n  split sentence = {self.doc_sents_words[sentence]} \n')
+                    embedding_list.append(np.mean(sentence_embeds, axis=0, weights = weight_vec))
 
                 self.candidate_set_embed.append(np.mean(embedding_list, axis=0))
 
         else:
             for candidate in self.candidate_set:
-                self.candidate_set_embed.append(model.embed(stemmer.stem(candidate)) if stemming else model.embed(candidate))
+                split_candidate = candidate.split(" ")
+                embed = model.embed(stemmer.stem(split_candidate)) if stemming else model.embed(split_candidate)
+                self.candidate_set_embed.append(np.mean(embed, axis=0))
 
     def extract_candidates(self, min_len : int = 5, grammar : str = ""):
         """
@@ -134,9 +194,8 @@ class Document:
 
     def top_n_candidates(self, model, top_n: int = 5, min_len : int = 5, stemming : bool = False, **kwargs) -> List[Tuple]:
        
-        mode = "" if "mode" not in kwargs else kwargs["mode"]
-        self.embed_doc(model, stemming, mode)
-        self.embed_candidates(model, stemming, mode)
+        self.embed_doc(model, stemming, "" if "doc_mode" not in kwargs else kwargs["doc_mode"])
+        self.embed_candidates(model, stemming, "" if "cand_mode" not in kwargs else kwargs["cand_mode"])
 
         doc_sim = []
         if "MMR" not in kwargs:

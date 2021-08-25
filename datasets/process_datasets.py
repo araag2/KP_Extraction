@@ -79,9 +79,12 @@ class DataSet:
 
                         doc = ""
                         soup = BeautifulSoup(open("{}/{}".format(subset_dir,file)).read(), "xml")
-                        content = soup.find_all('p') 
 
-                        print("doc")
+                        content = soup.find_all('journal-title') 
+                        for word in content:
+                            doc += "{}. ".format(re.sub(r'Figs?\.*\s*[0-9]*\.*', r'Fig ', word.get_text()))
+                            
+                        content = soup.find_all('p') 
                         for word in content:
                             doc += "{} ".format(re.sub(r'Figs?\.*\s*[0-9]*\.*', r'Fig ', word.get_text()))
 
@@ -90,6 +93,8 @@ class DataSet:
                             doc += "{}. ".format(re.sub(r'Figs?\.*\s*[0-9]*\.*', r'Fig ', word.get_text()))
 
                         res.append((doc, [r[0] for r in refs[file[:-4]]]))
+
+                        print("doc")
 
             write_to_file(p_data_path, res)
         return res

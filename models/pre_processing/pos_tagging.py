@@ -30,7 +30,7 @@ class POS_tagger_spacy(POS_tagger):
     Concrete data class for POS tagging using spacy
     """
     def __init__(self):
-        self.tagger = spacy.load("en_core_web_sm")
+        self.tagger = spacy.load("en_core_web_trf")
 
     def pos_tag_text(self, text: str = "") -> List[List[Tuple]]:
         doc = self.tagger(text)

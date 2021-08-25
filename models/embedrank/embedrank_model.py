@@ -1,5 +1,7 @@
+import itertools
 import numpy as np
 
+from itertools import product
 from nltk import RegexpParser
 from nltk.stem import PorterStemmer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -44,6 +46,7 @@ class EmbedRank(BaseKPModel):
         doc.extract_candidates(min_len, self.grammar)
         top_n, candidate_set = doc.top_n_candidates(self.model, top_n, min_len, stemming, **kwargs)
 
+        print("doc finished")
         return (top_n, candidate_set)
 
     def extract_kp_from_corpus(self, corpus, top_n=5, min_len=5, stemming=True, **kwargs) -> List[List[Tuple]]:
@@ -54,15 +57,16 @@ class EmbedRank(BaseKPModel):
         return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemming, **kwargs) for doc in corpus]
 
 
-dataset_obj = DataSet(["PubMed"])
-model = EmbedRank("paraphrase-MiniLM-L6-v2")
-res = {}
 
-for dataset in dataset_obj.dataset_content:
-   #res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:50], 5, 5, False, mode = "AvgPool", MMR = 0.5)
-   res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:10], 5, 5, False, mode = "AvgPool", MMR = 0.5)
+options1 = itertools.product(["AvgPool", "WeightPool"], ["", "AvgPool", "WeightPool", "AvgNormPool"])
+options = itertools.product(["AvgPool"], ["AvgPool"])
 
-print(extract_res_labels(res)["PubMed"][3][0])
-print(extract_dataset_labels(dataset_obj.dataset_content)["PubMed"][3])
-evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content), model.name, False)
+for d_mode, c_mode in options:
+    dataset_obj = DataSet(["PubMed"])
+    model = EmbedRank("paraphrase-mpnet-base-v2")
+    res = {}
+    for dataset in dataset_obj.dataset_content:
+        #res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:50], 5, 5, False, mode = "AvgPool", MMR = 0.5)
+        res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:5], 5, 5, False, doc_mode = d_mode, cand_mode = c_mode)
 
+    evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content), model.name, False)
