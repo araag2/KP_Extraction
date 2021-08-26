@@ -8,12 +8,18 @@ from sklearn.metrics.pairwise import cosine_similarity
 from typing import List, Tuple, Set
 
 from keybert.mmr import mmr
+
 from models.base_KP_model import BaseKPModel
 from models.pre_processing.pos_tagging import POS_tagger_spacy
 from models.pre_processing.pre_processing_utils import remove_punctuation, remove_whitespaces
 from models.pre_processing.document_abstraction import Document
+from models.pre_processing.dataset_embeddings_memory import EmbeddingsMemory
+
 from datasets.process_datasets import *
+
+from evaluation.config import EMBEDS_DIR
 from evaluation.evaluation_tools import evaluate_candidate_extraction, evaluate_kp_extraction, extract_dataset_labels, extract_res_labels
+
 
 class EmbedRank(BaseKPModel):
     """
@@ -58,15 +64,18 @@ class EmbedRank(BaseKPModel):
 
 
 
-options1 = itertools.product(["AvgPool", "WeightPool"], ["", "AvgPool", "WeightPool", "AvgNormPool"])
-options = itertools.product(["AvgPool"], ["AvgPool"])
+#options1 = itertools.product(["AvgPool", "WeightAvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
+#options = itertools.product(["AvgPool"], [""])
 
-for d_mode, c_mode in options:
-    dataset_obj = DataSet(["PubMed"])
-    model = EmbedRank("paraphrase-mpnet-base-v2")
-    res = {}
-    for dataset in dataset_obj.dataset_content:
+dataset_obj = DataSet(["PubMed"])
+model = EmbedRank("paraphrase-mpnet-base-v2")
+mem = EmbeddingsMemory(dataset_obj)
+mem.save_embeddings(dataset_obj, model.model, EMBEDS_DIR, POS_tagger_spacy(), False)
+
+#for d_mode, c_mode in options1:
+    #res = {}
+    #for dataset in dataset_obj.dataset_content:
         #res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:50], 5, 5, False, mode = "AvgPool", MMR = 0.5)
-        res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:5], 5, 5, False, doc_mode = d_mode, cand_mode = c_mode)
+        #res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], 5, 5, False, doc_mode = d_mode, cand_mode = c_mode)
 
-    evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content), model.name, False)
+    #evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content), model.name, True, doc_mode = d_mode, cand_mode = c_mode)

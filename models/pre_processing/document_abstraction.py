@@ -7,10 +7,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 from typing import List, Tuple, Set
 
 from keybert.mmr import mmr
+from utils.IO import read_from_file
 
 class Document:
     """
-    Simple abstract class to encapsulate document representation and functionality
+    Class to encapsulate document representation and functionality
     """
 
     def __init__(self, raw_text):
@@ -35,6 +36,7 @@ class Document:
         self.raw_text = raw_text
         self.punctuation_regex = "[!\"#\$%&'\(\)\*\+,\.\/:;<=>\?@\[\]\^_`{\|}~\-\–\—\‘\’\“\”]"
         self.doc_sents = []
+        self.stemmer = PorterStemmer()
 
     def pos_tag(self, tagger):
         """
@@ -43,6 +45,16 @@ class Document:
         self.tagged_text, self.doc_sents, self.doc_sents_words = tagger.pos_tag_text_sents_words(self.raw_text)
         self.doc_sents = [sent.text for sent in self.doc_sents if sent.text.strip()]
 
+    def embed_sents_words(self, model, stemming, memory = False, cand_mode = ""):
+        if not memory and cand_mode != "":
+            # Code to store words per sentence
+            self.doc_sents_words_embed = []
+
+            for i in range(len(self.doc_sents_words)):
+                self.doc_sents_words_embed.append(model.embed(self.stemmer.stem(self.doc_sents_words[i])) if stemming else model.embed(self.doc_sents_words[i]))
+        else:
+            self.doc_sents_words_embed = read_from_file(memory)
+
     def embed_doc(self, model, stemming, doc_mode: str = ""):
         """
         Method that embeds the document, having several modes according to usage. 
@@ -50,20 +62,19 @@ class Document:
             Segmented embeds the document in segments of up to 512 characters, pooling the Avg for doc representation.
             The default value just embeds the document normally.
         """
-        stemmer = PorterStemmer() if stemming else None
 
         if doc_mode == "AvgPool":
             doc_sents_embed = []
             for sentence in self.doc_sents:
-                doc_sents_embed.append(model.embed(stemmer.stem(sentence)) if stemming else model.embed(sentence))
+                doc_sents_embed.append(model.embed(self.stemmer.stem(sentence)) if stemming else model.embed(sentence))
 
             self.doc_embed = np.mean(doc_sents_embed, axis=0)
         
-        if doc_mode == "WeightPool":
+        if doc_mode == "WeightAvgPool":
             doc_sents_embed = []
             weight_vec = []
             for i in range(len(self.doc_sents)):
-                doc_sents_embed.append( model.embed(stemmer.stem(self.doc_sents[i])) if stemming else model.embed(self.doc_sents[i]))
+                doc_sents_embed.append( model.embed(self.stemmer.stem(self.doc_sents[i])) if stemming else model.embed(self.doc_sents[i]))
                 weight_vec.append(1 / (i + 1 + 50))
 
             self.doc_embed = np.average(doc_sents_embed, axis=0, weights = weight_vec)
@@ -73,18 +84,12 @@ class Document:
             segmented_doc_embeds = []
 
             for sentence in segmented_doc:
-                 segmented_doc_embeds.append(model.embed(stemmer.stem(sentence)) if stemming else model.embed(sentence))
+                 segmented_doc_embeds.append(model.embed(self.stemmer.stem(sentence)) if stemming else model.embed(sentence))
 
             self.doc_embed = np.mean(segmented_doc_embeds, axis=0)
 
         else:
-            self.doc_embed = model.embed(stemmer.stem(self.raw_text)) if stemming else model.embed(self.raw_text)
-
-        # Code to store words per sentence
-        self.doc_sents_words_embed = []
-
-        for i in range(len(self.doc_sents_words)):
-           self.doc_sents_words_embed.append(model.embed(stemmer.stem(self.doc_sents_words[i])) if stemming else model.embed(self.doc_sents_words[i]))
+            self.doc_embed = model.embed(self.stemmer.stem(self.raw_text)) if stemming else model.embed(self.raw_text)
 
     def embed_candidates(self, model, stemming, cand_mode: str = ""):
         """
@@ -92,7 +97,6 @@ class Document:
             AvgPool embed each sentence seperately and takes the Avg of all embeddings of sentences where the candidate occurs.
             The default value just embeds candidates directly.
         """
-        stemmer = PorterStemmer() if stemming else None
         self.candidate_set_embed = []
 
         if cand_mode == "AvgPool":
@@ -100,7 +104,7 @@ class Document:
 
                 split_candidate = candidate.split(" ")  
                 word_range = len(split_candidate)
-                embedding_list = [np.mean(model.embed(stemmer.stem(split_candidate)) if stemming else model.embed(split_candidate), axis=0)]
+                embedding_list = [np.mean(model.embed(self.stemmer.stem(split_candidate)) if stemming else model.embed(split_candidate), axis=0)]
 
                 for sentence in self.candidate_sents[candidate]:
                     sentence_embeds = []
@@ -116,12 +120,12 @@ class Document:
 
                 self.candidate_set_embed.append(np.mean(embedding_list, axis=0))
 
-        elif cand_mode == "WeightPool":
+        elif cand_mode == "WeightAvgPool":
             for candidate in self.candidate_set:
 
                 split_candidate = candidate.split(" ")  
                 word_range = len(split_candidate)
-                embedding_list = [np.mean(model.embed(stemmer.stem(split_candidate)) if stemming else model.embed(split_candidate), axis=0)]
+                embedding_list = [np.mean(model.embed(self.stemmer.stem(split_candidate)) if stemming else model.embed(split_candidate), axis=0)]
                 weight_vec = [1 / (1 + 50)]
 
                 for sentence in self.candidate_sents[candidate]:
@@ -138,14 +142,14 @@ class Document:
                     weight_vec.append(1 / (sentence + 50))
                     embedding_list.append(np.mean(sentence_embeds, axis=0))
 
-                self.candidate_set_embed.append(np.mean(embedding_list, axis=0, weights=weight_vec))
+                self.candidate_set_embed.append(np.average(embedding_list, axis=0, weights=weight_vec))
 
-        elif cand_mode == "AvgNormPool":
+        elif cand_mode == "NormAvgPool":
             for candidate in self.candidate_set:
 
                 split_candidate = candidate.split(" ")  
                 word_range = len(split_candidate)
-                embedding_list = [np.mean(model.embed(stemmer.stem(split_candidate)) if stemming else model.embed(split_candidate), axis=0)]
+                embedding_list = [np.mean(model.embed(self.stemmer.stem(split_candidate)) if stemming else model.embed(split_candidate), axis=0)]
 
                 for sentence in self.candidate_sents[candidate]:
                     sentence_embeds = []
@@ -159,14 +163,14 @@ class Document:
 
                     if sentence_embeds == []:
                         print(f'Error in candidate detection \n  candidate = {candidate}\n  split candidate = {split_candidate}\n  split sentence = {self.doc_sents_words[sentence]} \n')
-                    embedding_list.append(np.mean(sentence_embeds, axis=0, weights = weight_vec))
+                    embedding_list.append(np.average(sentence_embeds, axis=0, weights = weight_vec))
 
                 self.candidate_set_embed.append(np.mean(embedding_list, axis=0))
 
         else:
             for candidate in self.candidate_set:
                 split_candidate = candidate.split(" ")
-                embed = model.embed(stemmer.stem(split_candidate)) if stemming else model.embed(split_candidate)
+                embed = model.embed(self.stemmer.stem(split_candidate)) if stemming else model.embed(split_candidate)
                 self.candidate_set_embed.append(np.mean(embed, axis=0))
 
     def extract_candidates(self, min_len : int = 5, grammar : str = ""):
@@ -194,7 +198,7 @@ class Document:
 
     def top_n_candidates(self, model, top_n: int = 5, min_len : int = 5, stemming : bool = False, **kwargs) -> List[Tuple]:
        
-        self.embed_doc(model, stemming, "" if "doc_mode" not in kwargs else kwargs["doc_mode"])
+        self.embed_doc(model, stemming, "" if "doc_mode" not in kwargs else kwargs["doc_mode"], "" if "cand_mode" not in kwargs else kwargs["cand_mode"])
         self.embed_candidates(model, stemming, "" if "cand_mode" not in kwargs else kwargs["cand_mode"])
 
         doc_sim = []

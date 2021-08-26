@@ -30,9 +30,14 @@ def extract_res_labels(model_results):
             res[dataset].append( ([stemmer.stem(kp[0]) for kp in doc[0]], [stemmer.stem(kp) for kp in doc[1]])) 
     return res
 
-def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , save : bool = True) -> None:
-    stamp = "{} {}".format(strftime("%Y_%m_%d %H_%M", gmtime()), model_name)
-    res = "{}\n ------------- \n".format(stamp)
+def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , save : bool = True, **kwargs) -> None:
+    stamp = ''
+    if "doc_mode" in kwargs and "cand_mode" in kwargs:
+        stamp = f'{strftime("%Y_%m_%d %H_%M", gmtime())} {kwargs["doc_mode"]} {kwargs["cand_mode"]} {model_name}'
+    else:
+        stamp = f'{strftime("%Y_%m_%d %H_%M", gmtime())} {model_name}'
+        
+    res = f'{stamp}\n ------------- \n'
     res_dic = {}
 
     for dataset in model_results:
@@ -117,9 +122,9 @@ def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , sa
                     res_dic[name][measure] = dic[measure]
         
     if save:
-        with open("{}/raw/{} raw.txt".format(RESULT_DIR, stamp), "a") as f:
+        with open(f'{RESULT_DIR}/raw/{stamp} raw.txt', "a") as f:
             f.write(res.rstrip())
-        write_to_file("{}/struct/{}.txt".format(RESULT_DIR, stamp), res_dic)
+        write_to_file(f'{RESULT_DIR}/struct/{stamp}.txt', res_dic)
 
     print(res)
     return
