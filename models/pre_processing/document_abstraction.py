@@ -14,7 +14,7 @@ class Document:
     Class to encapsulate document representation and functionality
     """
 
-    def __init__(self, raw_text):
+    def __init__(self, raw_text, id):
         """
         Stores the raw text representation of the doc, a pos_tagger and the grammar to
         extract candidates with.
@@ -37,6 +37,7 @@ class Document:
         self.punctuation_regex = "[!\"#\$%&'\(\)\*\+,\.\/:;<=>\?@\[\]\^_`{\|}~\-\–\—\‘\’\“\”]"
         self.doc_sents = []
         self.stemmer = PorterStemmer()
+        self.id = id
 
     def pos_tag(self, tagger):
         """
@@ -45,15 +46,15 @@ class Document:
         self.tagged_text, self.doc_sents, self.doc_sents_words = tagger.pos_tag_text_sents_words(self.raw_text)
         self.doc_sents = [sent.text for sent in self.doc_sents if sent.text.strip()]
 
-    def embed_sents_words(self, model, stemming, memory = False, cand_mode = ""):
-        if not memory and cand_mode != "":
+    def embed_sents_words(self, model, stemming, memory = False):
+        if not memory:
             # Code to store words per sentence
             self.doc_sents_words_embed = []
 
             for i in range(len(self.doc_sents_words)):
                 self.doc_sents_words_embed.append(model.embed(self.stemmer.stem(self.doc_sents_words[i])) if stemming else model.embed(self.doc_sents_words[i]))
         else:
-            self.doc_sents_words_embed = read_from_file(memory)
+            self.doc_sents_words_embed = read_from_file(f'{memory}/{self.id}.txt')
 
     def embed_doc(self, model, stemming, doc_mode: str = ""):
         """
@@ -198,8 +199,12 @@ class Document:
 
     def top_n_candidates(self, model, top_n: int = 5, min_len : int = 5, stemming : bool = False, **kwargs) -> List[Tuple]:
        
-        self.embed_doc(model, stemming, "" if "doc_mode" not in kwargs else kwargs["doc_mode"], "" if "cand_mode" not in kwargs else kwargs["cand_mode"])
-        self.embed_candidates(model, stemming, "" if "cand_mode" not in kwargs else kwargs["cand_mode"])
+        cand_mode = "" if "cand_mode" not in kwargs else kwargs["cand_mode"]
+        self.embed_doc(model, stemming, "" if "doc_mode" not in kwargs else kwargs["doc_mode"])
+        
+        if cand_mode != "":
+            self.embed_sents_words(model, stemming, False if "memory" not in kwargs else kwargs["memory"])
+        self.embed_candidates(model, stemming, cand_mode)
 
         doc_sim = []
         if "MMR" not in kwargs:
