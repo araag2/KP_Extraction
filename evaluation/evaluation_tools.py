@@ -52,7 +52,7 @@ def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , sa
                         "nDCG" : []
                      }
 
-        k_set = [3, 5, 7]
+        k_set = [5, 10, 15]
         for k in k_set:
             results_kp["Precision_{}".format(k)] = []
             results_kp["Recall_{}".format(k)] = []
@@ -124,7 +124,7 @@ def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , sa
     if save:
         with open(f'{RESULT_DIR}/raw/{stamp} raw.txt', "a") as f:
             f.write(res.rstrip())
-        write_to_file(f'{RESULT_DIR}/struct/{stamp}.txt', res_dic)
+        write_to_file(f'{RESULT_DIR}/struct/{stamp}', res_dic)
 
     print(res)
     return

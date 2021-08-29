@@ -83,3 +83,4 @@ config.py
 # results
 results/
 embeds/
+pos_tags/

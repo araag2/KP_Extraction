@@ -9,7 +9,6 @@ class EmbeddingsMemory:
     """
     Class to calculate and store embeddings in memory
     """
-
     def __init__(self, corpus):
         self.corpus = corpus
         self.stemmer = PorterStemmer()

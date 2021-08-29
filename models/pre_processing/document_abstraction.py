@@ -1,3 +1,4 @@
+import time
 import re
 import numpy as np
 
@@ -39,11 +40,11 @@ class Document:
         self.stemmer = PorterStemmer()
         self.id = id
 
-    def pos_tag(self, tagger):
+    def pos_tag(self, tagger, memory, id):
         """
         Method that handles POS_tagging of an entire document, whilst storing it seperated by sentences
         """
-        self.tagged_text, self.doc_sents, self.doc_sents_words = tagger.pos_tag_text_sents_words(self.raw_text)
+        self.tagged_text, self.doc_sents, self.doc_sents_words = tagger.pos_tag_text_sents_words(self.raw_text, memory, id)
         self.doc_sents = [sent.text for sent in self.doc_sents if sent.text.strip()]
 
     def embed_sents_words(self, model, stemming, memory = False):
@@ -54,7 +55,7 @@ class Document:
             for i in range(len(self.doc_sents_words)):
                 self.doc_sents_words_embed.append(model.embed(self.stemmer.stem(self.doc_sents_words[i])) if stemming else model.embed(self.doc_sents_words[i]))
         else:
-            self.doc_sents_words_embed = read_from_file(f'{memory}/{self.id}.txt')
+            self.doc_sents_words_embed = read_from_file(f'{memory}/{self.id}')
 
     def embed_doc(self, model, stemming, doc_mode: str = ""):
         """
@@ -200,10 +201,12 @@ class Document:
     def top_n_candidates(self, model, top_n: int = 5, min_len : int = 5, stemming : bool = False, **kwargs) -> List[Tuple]:
        
         cand_mode = "" if "cand_mode" not in kwargs else kwargs["cand_mode"]
+
         self.embed_doc(model, stemming, "" if "doc_mode" not in kwargs else kwargs["doc_mode"])
-        
+
         if cand_mode != "":
             self.embed_sents_words(model, stemming, False if "memory" not in kwargs else kwargs["memory"])
+
         self.embed_candidates(model, stemming, cand_mode)
 
         doc_sim = []
