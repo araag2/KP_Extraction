@@ -113,7 +113,7 @@ def evaluate_kp_extraction(model_results : Dict[str, List] = {}, true_labels: Di
         for result in results_c:
             res += f'{result} = {np.mean(results_c[result])*100:.3f}%\n'
 
-        if not kp_eval:
+        if kp_eval:
             res += "\nKP Ranking Evalution: \n"
             for result in results_kp:
                 res += f'{result} = {np.mean(results_kp[result])*100:.3f}%\n'
