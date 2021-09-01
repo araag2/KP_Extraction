@@ -20,10 +20,10 @@ class BaseEmbedRank (BaseKPModel):
     the KeyBert backend to retrieve models
     """
 
-    def __init__(self, model):
-        super().__init__(model, str(self.__str__))
+    def __init__(self, model, tagger):
+        super().__init__(model)
 
-        self.tagger = POS_tagger_spacy()
+        self.tagger = POS_tagger_spacy(tagger)
         self.grammar = """  NP: 
         {<PROPN|NOUN|ADJ>*<PROPN|NOUN>+<ADJ>*}"""
 
@@ -39,7 +39,7 @@ class BaseEmbedRank (BaseKPModel):
         """
         Method that handles POS_tagging of an entire document, pre-processing or stemming it in the process
         """
-        return self.tagger.pos_tag_text(doc)
+        return self.tagger.pos_tag_doc(doc)
 
     def extract_candidates(self, tagged_doc : List[List[Tuple]] = [], **kwargs) -> List[str]:
         """

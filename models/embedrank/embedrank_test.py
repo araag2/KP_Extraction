@@ -10,7 +10,7 @@ doc_one, doc_two = test_data()
 def test_empty_doc():
     """ Test empty doc """
 
-    model = EmbedRank("xlm-r-bert-base-nli-stsb-mean-tokens")
+    model = EmbedRank("paraphrase-MiniLM-L6-v2", "en_core_web_sm")
 
     with pytest.raises(ValueError):
         empty_extract = model.extract_kp_from_doc("", 5, 0, True)
@@ -22,7 +22,7 @@ def test_empty_doc():
 def test_extract_kp_single_doc(top_n):
     """ Test extraction of single document method """
 
-    model = EmbedRank("xlm-r-bert-base-nli-stsb-mean-tokens")
+    model = EmbedRank("paraphrase-MiniLM-L6-v2", "en_core_web_sm")
     kp = model.extract_kp_from_doc(doc_one, top_n, 0, True)
 
     assert isinstance(model, EmbedRank)
@@ -41,7 +41,7 @@ def test_extract_kp_single_doc(top_n):
 def test_extract_kp_corpus(top_n):
     """ Test extraction of two documents """
 
-    model = EmbedRank("xlm-r-bert-base-nli-stsb-mean-tokens")
+    model = EmbedRank("paraphrase-MiniLM-L6-v2", "en_core_web_sm")
     kp = model.extract_kp_from_corpus([[doc_one], [doc_two]], top_n)
 
     assert isinstance(model, EmbedRank)

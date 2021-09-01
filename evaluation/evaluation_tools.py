@@ -1,4 +1,5 @@
 from os import write
+from typing import List, Dict, Tuple
 import numpy as np
 
 from nltk.stem import PorterStemmer
@@ -30,7 +31,11 @@ def extract_res_labels(model_results):
             res[dataset].append( ([stemmer.stem(kp[0]) for kp in doc[0]], [stemmer.stem(kp) for kp in doc[1]])) 
     return res
 
-def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , save : bool = True, **kwargs) -> None:
+def evaluate_kp_extraction(model_results : Dict[str, List] = {}, true_labels: Dict[str, Tuple[List]] = {}, model_name: str = "" , save : bool = True, kp_eval : bool = True, **kwargs) -> None:
+    """
+    Function that evaluates the model result in each dataset it ran on, considering the true labels of said dataset.
+    """
+
     stamp = ''
     if "doc_mode" in kwargs and "cand_mode" in kwargs:
         stamp = f'{strftime("%Y_%m_%d %H_%M", gmtime())} {kwargs["doc_mode"]} {kwargs["cand_mode"]} {model_name}'
@@ -52,11 +57,12 @@ def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , sa
                         "nDCG" : []
                      }
 
-        k_set = [5, 10, 15]
+        k_set = [5, 10, 15] if "k_set" not in kwargs else kwargs["k_set"]
+
         for k in k_set:
-            results_kp["Precision_{}".format(k)] = []
-            results_kp["Recall_{}".format(k)] = []
-            results_kp["F1_{}".format(k)] = []
+            results_kp[f'Precision_{k}'] = []
+            results_kp[f'Recall_{k}'] = []
+            results_kp[f'F1_{k}'] = []
 
         for i in range(len(model_results[dataset])):
             candidates = model_results[dataset][i][1]
@@ -89,9 +95,9 @@ def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , sa
                 if p_k != 0 and r_k != 0:
                     f1_k = ( 2.0 * p_k * r_k ) / ( p_k + r_k)
                 
-                results_kp["Precision_{}".format(k)].append(p_k)
-                results_kp["Recall_{}".format(k)].append(r_k)
-                results_kp["F1_{}".format(k)].append(f1_k)
+                results_kp[f'Precision_{k}'].append(p_k)
+                results_kp[f'Recall_{k}'].append(r_k)
+                results_kp[f'F1_{k}'].append(f1_k)
 
             ap = [ len( [ k for k in top_kp[:p] if k in true_label ] ) / float( p ) for p in range(1,len(top_kp) + 1) if top_kp[p - 1] in true_label ]
             map = np.sum(ap) / float( len( true_label ) )
@@ -101,17 +107,16 @@ def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , sa
             results_kp["MAP"].append(map)	
             results_kp["nDCG"].append(ndcg)	
 
-        res += "\nResults for Dataset {}\n --- \n".format(dataset)
+        res += f'\nResults for Dataset {dataset}\n --- \n'
 
-        # Candidate results, in Precision, Recall and F1-Score
         res += "Candidate Extraction Evalution: \n"
         for result in results_c:
-            res += "{} = {:.3f}%\n".format(result, np.mean(results_c[result])*100)
+            res += f'{result} = {np.mean(results_c[result])*100:.3f}%\n'
 
-        # KP results, in Precision_k, Recall_k, F1-Score_k, MAP and nDCG for KP
-        res += "\nKP Ranking Evalution: \n"
-        for result in results_kp:
-            res += "{} = {:.3f}%\n".format(result, np.mean(results_kp[result])*100)
+        if not kp_eval:
+            res += "\nKP Ranking Evalution: \n"
+            for result in results_kp:
+                res += f'{result} = {np.mean(results_kp[result])*100:.3f}%\n'
 
         if save:
             res_dic[dataset] = {}
@@ -128,57 +133,3 @@ def evaluate_kp_extraction(model_results, true_labels, model_name: str = "" , sa
 
     print(res)
     return
-
-def evaluate_candidate_extraction(model_results, true_labels, model_name: str = "" , save : bool = True) -> None:
-    stamp = "{} {}".format(strftime("%Y_%m_%d %H_%M", gmtime()), model_name)
-    res = "{}\n ------------- \n".format(stamp)
-    res_dic = {}
-
-    for dataset in model_results:
-        results_c = { 
-                        "Precision" : [], 
-                        "Recall" : [],
-                        "F1" : []
-                    }
-
-        for i in range(len(model_results[dataset])):
-            candidates = model_results[dataset][i][1]
-            len_candidates = float(len(candidates))
-
-            true_label = true_labels[dataset][i]
-            len_true_label = float(len(true_label))
-
-            # Precision, Recall and F1-Score for candidates
-            p = min(1.0, len([kp for kp in candidates if kp in true_label]) / len_candidates)
-            r = min(1.0, len([kp for kp in candidates if kp in true_label]) / len_true_label)
-            f1 = 0.0
-
-            if p != 0 and r != 0:
-                f1 = ( 2.0 * p * r ) / ( p + r)
-
-            results_c["Precision"].append(p)
-            results_c["Recall"].append(r)
-            results_c["F1"].append(f1)
-
-        res += "\nResults for Dataset {}\n --- \n".format(dataset)
-
-        # Candidate results, in Precision, Recall and F1-Score
-        res += "Candidate Extraction Evalution: \n"
-        for result in results_c:
-            res += "{} = {:.3f}%\n".format(result, np.mean(results_c[result])*100)
-
-        if save:
-            res_dic[dataset] = {}
-            for (name, dic) in [("candidates", results_c)]:
-
-                res_dic[name] = {}
-                for measure in dic:
-                    res_dic[name][measure] = dic[measure]
-        
-    if save:
-        with open("{}/raw/{} raw.txt".format(RESULT_DIR, stamp), "a") as f:
-            f.write(res.rstrip())
-        write_to_file("{}/struct/{}.txt".format(RESULT_DIR, stamp), res_dic)
-
-    print(res)
-    return      

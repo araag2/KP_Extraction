@@ -104,9 +104,9 @@ class Document:
         if cand_mode == "AvgPool":
             for candidate in self.candidate_set:
 
-                split_candidate = candidate.split(" ")  
+                split_candidate = [self.stemmer.stem(candidate) if stemming else candidate for candidate in candidate.split(" ")]
                 word_range = len(split_candidate)
-                embedding_list = [np.mean(model.embed(self.stemmer.stem(split_candidate)) if stemming else model.embed(split_candidate), axis=0)]
+                embedding_list = [np.mean(model.embed(split_candidate), axis=0)]
 
                 for sentence in self.candidate_sents[candidate]:
                     sentence_embeds = []
@@ -125,9 +125,9 @@ class Document:
         elif cand_mode == "WeightAvgPool":
             for candidate in self.candidate_set:
 
-                split_candidate = candidate.split(" ")  
+                split_candidate = [self.stemmer.stem(candidate) if stemming else candidate for candidate in candidate.split(" ")]
                 word_range = len(split_candidate)
-                embedding_list = [np.mean(model.embed(self.stemmer.stem(split_candidate)) if stemming else model.embed(split_candidate), axis=0)]
+                embedding_list = [np.mean(model.embed(split_candidate), axis=0)]
                 weight_vec = [1 / (1 + 50)]
 
                 for sentence in self.candidate_sents[candidate]:
@@ -149,9 +149,9 @@ class Document:
         elif cand_mode == "NormAvgPool":
             for candidate in self.candidate_set:
 
-                split_candidate = candidate.split(" ")  
+                split_candidate = [self.stemmer.stem(candidate) if stemming else candidate for candidate in candidate.split(" ")]
                 word_range = len(split_candidate)
-                embedding_list = [np.mean(model.embed(self.stemmer.stem(split_candidate)) if stemming else model.embed(split_candidate), axis=0)]
+                embedding_list = [np.mean(model.embed(split_candidate), axis=0)]
 
                 for sentence in self.candidate_sents[candidate]:
                     sentence_embeds = []
@@ -164,15 +164,16 @@ class Document:
                                 weight_vec.append(np.linalg.norm(self.doc_sents_words_embed[sentence][i+j]))
 
                     if sentence_embeds == []:
-                        print(f'Error in candidate detection \n  candidate = {candidate}\n  split candidate = {split_candidate}\n  split sentence = {self.doc_sents_words[sentence]} \n')
+                        print(f'Error in candidate detection \n  candidate = {candidate}\n  split candidate = {split_candidate}\n  \
+                        split sentence = {self.doc_sents_words[sentence]} \n')
                     embedding_list.append(np.average(sentence_embeds, axis=0, weights = weight_vec))
 
                 self.candidate_set_embed.append(np.mean(embedding_list, axis=0))
 
         else:
             for candidate in self.candidate_set:
-                split_candidate = candidate.split(" ")
-                embed = model.embed(self.stemmer.stem(split_candidate)) if stemming else model.embed(split_candidate)
+                split_candidate = [self.stemmer.stem(candidate) if stemming else candidate for candidate in candidate.split(" ")]
+                embed = model.embed(split_candidate)
                 self.candidate_set_embed.append(np.mean(embed, axis=0))
 
     def extract_candidates(self, min_len : int = 5, grammar : str = ""):

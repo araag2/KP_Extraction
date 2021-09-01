@@ -20,7 +20,7 @@ from models.pre_processing.dataset_embeddings_memory import EmbeddingsMemory
 from datasets.process_datasets import *
 
 from evaluation.config import POS_TAG_DIR, EMBEDS_DIR, RESULT_DIR
-from evaluation.evaluation_tools import evaluate_candidate_extraction, evaluate_kp_extraction, extract_dataset_labels, extract_res_labels
+from evaluation.evaluation_tools import evaluate_kp_extraction, extract_dataset_labels, extract_res_labels
 
 
 class EmbedRank(BaseKPModel):
@@ -78,25 +78,26 @@ class EmbedRank(BaseKPModel):
 #    if "KP" in line:
 #        p = True
 
-
-dataset_obj = DataSet(["DUC"])
-model = EmbedRank("paraphrase-mpnet-base-v2", "en_core_web_trf")
-#for dataset in dataset_obj.dataset_content:
-    #model.tagger.pos_tag_to_file(dataset_obj.dataset_content[dataset], f'{POS_TAG_DIR}{dataset}/en_core_web_trf/', 113)
-
-#mem = EmbeddingsMemory(dataset_obj)
-#mem.save_embeddings(dataset_obj, model.model, "paraphrase-mpnet-base-v2", EMBEDS_DIR, POS_tagger_spacy("en_core_web_trf"), False, 131)
-
-spacy.require_gpu()
-options = itertools.product(["AvgPool", "WeightAvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
-#options = itertools.product(["WeightAvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
-
-for d_mode, c_mode in options:
+#dataset_obj = DataSet(["DUC"])
+#model = EmbedRank("paraphrase-mpnet-base-v2", "en_core_web_trf")
+#print(type(model.tagger.pos_tag_str("ola")))
+##for dataset in dataset_obj.dataset_content:
+#    #model.tagger.pos_tag_to_file(dataset_obj.dataset_content[dataset], f'{POS_TAG_DIR}{dataset}/en_core_web_trf/', 113)
+#
+##mem = EmbeddingsMemory(dataset_obj)
+##mem.save_embeddings(dataset_obj, model.model, "paraphrase-mpnet-base-v2", EMBEDS_DIR, POS_tagger_spacy("en_core_web_trf"), False, 131)
+#
+#spacy.require_gpu()
+#options = itertools.product(["AvgPool", "WeightAvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
+##options = itertools.product(["WeightAvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
+#
 #for d_mode, c_mode in options:
-    res = {}
-    for dataset in dataset_obj.dataset_content:
-        pos_tag_memory_dir = f'{POS_TAG_DIR}{dataset}/en_core_web_trf/'
-        embed_memory_dir = f'{EMBEDS_DIR}{dataset}/paraphrase-mpnet-base-v2/'
-        res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:50], 15, 5, False, doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir)
-
-    evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content), model.name, True, doc_mode = d_mode, cand_mode = c_mode)
+##for d_mode, c_mode in options:
+#    res = {}
+#    for dataset in dataset_obj.dataset_content:
+#        pos_tag_memory_dir = f'{POS_TAG_DIR}{dataset}/en_core_web_trf/'
+#        embed_memory_dir = f'{EMBEDS_DIR}{dataset}/paraphrase-mpnet-base-v2/'
+#        res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:50], 15, 5, False, doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir)
+#        res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:50], 15, 5, False, doc_mode = d_mode, cand_mode = c_mode)
+#
+#    evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content), model.name, True, True, doc_mode = d_mode, cand_mode = c_mode)
