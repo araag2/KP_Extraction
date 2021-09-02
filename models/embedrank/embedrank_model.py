@@ -1,13 +1,11 @@
-import time
 import itertools
+import time
 import numpy as np
-import thinc_gpu_ops
 
 from itertools import product
-from nltk import RegexpParser
-from nltk.stem import PorterStemmer
-from sklearn.metrics.pairwise import cosine_similarity
 from typing import List, Tuple, Set
+from nltk.stem import PorterStemmer
+from nltk.stem import WordNetLemmatizer
 
 from keybert.mmr import mmr
 
@@ -44,7 +42,7 @@ class EmbedRank(BaseKPModel):
         doc = remove_punctuation(doc)
         return remove_whitespaces(doc)[1:]
 
-    def extract_kp_from_doc(self, doc, top_n, min_len, stemming, **kwargs) -> Tuple[List[Tuple], List[str]]:
+    def extract_kp_from_doc(self, doc, top_n, min_len, stemmer = None, lemmer = False, **kwargs) -> Tuple[List[Tuple], List[str]]:
         """
         Concrete method that extracts key-phrases from a given document, with optional arguments
         relevant to its specific functionality
@@ -52,23 +50,26 @@ class EmbedRank(BaseKPModel):
 
         doc = Document(doc, self.counter)
         doc.pos_tag(self.tagger, False if "pos_tag_memory" not in kwargs else kwargs["pos_tag_memory"], self.counter)
-        doc.extract_candidates(min_len, self.grammar)
+        doc.extract_candidates(min_len, self.grammar, lemmer)
 
-        top_n, candidate_set = doc.top_n_candidates(self.model, top_n, min_len, stemming, **kwargs)
+        top_n, candidate_set = doc.top_n_candidates(self.model, top_n, min_len, stemmer, **kwargs)
 
-        
-        print(f'document {self.counter} processed')
+        print(f'document {self.counter} processed\n')
         self.counter += 1
         torch.cuda.empty_cache()
+
         return (top_n, candidate_set)
 
-    def extract_kp_from_corpus(self, corpus, top_n=5, min_len=5, stemming=True, **kwargs) -> List[List[Tuple]]:
+    def extract_kp_from_corpus(self, corpus, top_n=5, min_len=5, stemming=False, lemmatize = False, **kwargs) -> List[List[Tuple]]:
         """
         Concrete method that extracts key-phrases from a list of given documents, with optional arguments
         relevant to its specific functionality
         """
         self.counter = 0
-        return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemming, **kwargs) for doc in corpus]
+        stemer = None if not stemming else PorterStemmer()
+        lemmer = None if not lemmatize else WordNetLemmatizer()
+
+        return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemer, lemmer, **kwargs) for doc in corpus]
 
 
 #p = False
@@ -79,26 +80,31 @@ class EmbedRank(BaseKPModel):
 #        p = True
 
 spacy.require_gpu()
-dataset_obj = DataSet(["DUC"])
+dataset_obj = DataSet(["NUS"])
 model = EmbedRank("paraphrase-mpnet-base-v2", "en_core_web_trf")
 
 #for dataset in dataset_obj.dataset_content:
-    #model.tagger.pos_tag_to_file(dataset_obj.dataset_content[dataset], f'{POS_TAG_DIR}{dataset}/en_core_web_trf/', 0)
+    #model.tagger.pos_tag_to_file(dataset_obj.dataset_content[dataset], f'{POS_TAG_DIR}{dataset}/en_core_web_trf/', 57)
 
 #mem = EmbeddingsMemory(dataset_obj)
-#mem.save_embeddings(dataset_obj, model.model, "paraphrase-mpnet-base-v2", EMBEDS_DIR, POS_tagger_spacy("en_core_web_trf"), False, 131)
+#mem.save_embeddings(dataset_obj, model.model, "paraphrase-mpnet-base-v2", EMBEDS_DIR, POS_tagger_spacy("en_core_web_trf"), False, 37)
 
 
 #options = itertools.product(["AvgPool", "WeightAvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
-#options = itertools.product(["WeightAvgPool"], ["AvgPool", "WeightAvgPool", "NormAvgPool"])
-options = itertools.product(["WeightAvgPool"], ["NormAvgPool"])
+#options = itertools.product(["WeightAvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
+options = itertools.product(["WeightAvgPool"], ["AvgPool"])
+#options = itertools.product(["WeightAvgPool"], ["NormAvgPool"])
 
 for d_mode, c_mode in options:
     res = {}
     for dataset in dataset_obj.dataset_content:
         pos_tag_memory_dir = f'{POS_TAG_DIR}{dataset}/en_core_web_trf/'
         embed_memory_dir = f'{EMBEDS_DIR}{dataset}/paraphrase-mpnet-base-v2/'
-        #res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:50], 15, 5, False, doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir)
-        res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:5], 15, 5, False, doc_mode = d_mode, cand_mode = c_mode)
 
-    evaluate_kp_extraction(extract_res_labels(res), extract_dataset_labels(dataset_obj.dataset_content), model.name, False, True, doc_mode = d_mode, cand_mode = c_mode)
+        res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:1], 15, 5, False,  False,\
+        doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir)
+
+        #res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:5], 15, 5, False, doc_mode = d_mode, cand_mode = c_mode)
+
+    evaluate_kp_extraction(extract_res_labels(res, PorterStemmer()), extract_dataset_labels(dataset_obj.dataset_content, PorterStemmer(), None), \
+    model.name, False, True, doc_mode = d_mode, cand_mode = c_mode)

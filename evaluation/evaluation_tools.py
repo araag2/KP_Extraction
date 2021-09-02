@@ -1,5 +1,5 @@
 from os import write
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Callable
 import numpy as np
 
 from nltk.stem import PorterStemmer
@@ -7,28 +7,31 @@ from time import gmtime, strftime
 from evaluation.config import RESULT_DIR
 from utils.IO import write_to_file
 
-def extract_dataset_labels(corpus_true_labels):
-    """
-    Code snippet to correctly format dataset true labels
-    """
-    stemmer = PorterStemmer()
-    res = {}
-    for dataset in corpus_true_labels:
-        res[dataset] = []
-        for i in range(len(corpus_true_labels[dataset])):
-            res[dataset].append([stemmer.stem(kp) for kp in corpus_true_labels[dataset][i][1]])
-    return res
-
-def extract_res_labels(model_results):
+def extract_res_labels(model_results, stemmer: Callable = None):
     """
     Code snippet to correctly model results
     """
-    stemmer = PorterStemmer()
     res = {}
     for dataset in model_results:        
         res[dataset] = []
         for doc in model_results[dataset]:
             res[dataset].append( ([stemmer.stem(kp[0]) for kp in doc[0]], [stemmer.stem(kp) for kp in doc[1]])) 
+    return res
+
+def extract_dataset_labels(corpus_true_labels, stemmer: Callable = None, lemmer: Callable = None):
+    """
+    Code snippet to correctly format dataset true labels
+    """
+    res = {}
+    for dataset in corpus_true_labels:
+        res[dataset] = []
+        for i in range(len(corpus_true_labels[dataset])):
+            doc_results = []
+            for kp in corpus_true_labels[dataset][i][1]:
+                kp = stemmer.stem(kp) if stemmer else kp
+                kp = lemmer.lematize(kp) if lemmer else kp
+                doc_results.append(kp)
+            res[dataset].append(doc_results)
     return res
 
 def evaluate_kp_extraction(model_results : Dict[str, List] = {}, true_labels: Dict[str, Tuple[List]] = {}, model_name: str = "" , save : bool = True, kp_eval : bool = True, **kwargs) -> None:

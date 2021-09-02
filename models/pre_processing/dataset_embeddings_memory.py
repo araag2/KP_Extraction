@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 from nltk.stem import PorterStemmer
 from typing import List, Tuple, Set
@@ -32,7 +33,8 @@ class EmbeddingsMemory:
             dir = f'{save_dir}{dataset}/{embeds}/'
 
             for i in range(start_index, len(dataset_obj.dataset_content[dataset])):
+                torch.cuda.empty_cache()
                 result_dir = f'{dir}{i}'
-                doc_sents_words =[[token.text for token in sent] for sent in tagger.tagger([dataset][i][0]).sents if sent.text.strip()]
+                doc_sents_words =[[token.text for token in sent] for sent in tagger.tagger(dataset_obj.dataset_content[dataset][i][0]).sents if sent.text.strip()]
                 self.write_embeds(model, result_dir, doc_sents_words)
                 print(f'Doc {i} stored')

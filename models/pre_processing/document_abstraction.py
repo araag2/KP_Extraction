@@ -3,9 +3,8 @@ import re
 import numpy as np
 
 from nltk import RegexpParser
-from nltk.stem import PorterStemmer
 from sklearn.metrics.pairwise import cosine_similarity
-from typing import List, Tuple, Set
+from typing import List, Tuple, Set, Callable
 
 from keybert.mmr import mmr
 from utils.IO import read_from_file
@@ -37,7 +36,6 @@ class Document:
         self.raw_text = raw_text
         self.punctuation_regex = "[!\"#\$%&'\(\)\*\+,\.\/:;<=>\?@\[\]\^_`{\|}~\-\–\—\‘\’\“\”]"
         self.doc_sents = []
-        self.stemmer = PorterStemmer()
         self.id = id
 
     def pos_tag(self, tagger, memory, id):
@@ -47,27 +45,27 @@ class Document:
         self.tagged_text, self.doc_sents, self.doc_sents_words = tagger.pos_tag_text_sents_words(self.raw_text, memory, id)
         self.doc_sents = [sent.text for sent in self.doc_sents if sent.text.strip()]
 
-    def embed_sents_words(self, model, stemming, memory = False):
+    def embed_sents_words(self, model, stemmer : Callable = None, memory = False):
         if not memory:
             # Code to store words per sentence
             self.doc_sents_words_embed = []
 
             for i in range(len(self.doc_sents_words)):
-                self.doc_sents_words_embed.append(model.embed(self.stemmer.stem(self.doc_sents_words[i])) if stemming else model.embed(self.doc_sents_words[i]))
+                self.doc_sents_words_embed.append(model.embed(stemmer.stem(self.doc_sents_words[i])) if stemmer else model.embed(self.doc_sents_words[i]))
         else:
             self.doc_sents_words_embed = read_from_file(f'{memory}/{self.id}')
 
-    def embed_doc(self, model, stemming, doc_mode: str = ""):
+    def embed_doc(self, model, stemmer : Callable = None, doc_mode: str = ""):
         """
         Method that embeds the document, having several modes according to usage. 
             AvgPool embed each sentence seperately and takes the Avg of all embeddings as the final document result.
             Segmented embeds the document in segments of up to 512 characters, pooling the Avg for doc representation.
             The default value just embeds the document normally.
         """
-        
+
         if doc_mode == "AvgPool" or "WeightAvgPool":
             weight_factors = {"AvgPool" : None , 
-                              "WeightAvgPool" : (lambda i: 1 / (i + 50))}
+                              "WeightAvgPool" : (lambda i: 1 / (i + 1))}
 
             weight_f = weight_factors[doc_mode]
             doc_sents_embed = []
@@ -75,8 +73,8 @@ class Document:
             weight_vec = None if weight_f == None else []
 
             for i in range(len(self.doc_sents)):
-                doc_sents_embed.append(model.embed(self.stemmer.stem(self.doc_sents[i])) if stemming else model.embed(self.doc_sents[i]))
-                
+                doc_sents_embed.append(model.embed(stemmer.stem(self.doc_sents[i])) if stemmer else model.embed(self.doc_sents[i]))
+
                 if weight_vec != None:
                     weight_vec.append(weight_f(i))
 
@@ -87,14 +85,14 @@ class Document:
             segmented_doc_embeds = []
 
             for sentence in segmented_doc:
-                 segmented_doc_embeds.append(model.embed(self.stemmer.stem(sentence)) if stemming else model.embed(sentence))
+                 segmented_doc_embeds.append(model.embed(stemmer.stem(sentence)) if stemmer else model.embed(sentence))
 
             self.doc_embed = np.mean(segmented_doc_embeds, axis=0)
 
         else:
-            self.doc_embed = model.embed(self.stemmer.stem(self.raw_text)) if stemming else model.embed(self.raw_text)
+            self.doc_embed = model.embed(stemmer.stem(self.raw_text)) if stemmer else model.embed(self.raw_text)
 
-    def embed_candidates(self, model, stemming, cand_mode: str = ""):
+    def embed_candidates(self, model, stemmer : Callable = None, cand_mode: str = ""):
         """
         Method that embeds the current candidate set, having several modes according to usage. 
             AvgPool embed each sentence seperately and takes the Avg of all embeddings of sentences where the candidate occurs.
@@ -110,7 +108,7 @@ class Document:
 
             for candidate in self.candidate_set:
 
-                split_candidate = [self.stemmer.stem(candidate) for candidate in candidate.split(" ")] if stemming else candidate.split(" ")
+                split_candidate = [stemmer.stem(candidate) for candidate in candidate.split(" ")] if stemmer else candidate.split(" ")
                 word_range = len(split_candidate)
                 candidate_embed = model.embed(split_candidate)
                 
@@ -119,11 +117,11 @@ class Document:
 
                 weight_phrase_vec = None if weight_f[0] == None else [weight_f[0](0)]
 
-                for sentence in self.candidate_sents[candidate]:
+                for sentence, text_candidate in self.candidate_sents[candidate]:
                     sentence_embeds = []
 
                     for i, x in enumerate(self.doc_sents_words[sentence]):
-                        if x == split_candidate[0] and not word_range or split_candidate == self.doc_sents_words[sentence][i : i + word_range]:
+                        if x == text_candidate[0] and text_candidate == self.doc_sents_words[sentence][i : i + word_range]:
                             for j in range(word_range):
                                 sentence_embeds.append(self.doc_sents_words_embed[sentence][i+j])
 
@@ -142,11 +140,11 @@ class Document:
 
         else:
             for candidate in self.candidate_set:
-                split_candidate = [self.stemmer.stem(candidate) for candidate in candidate.split(" ")] if stemming else candidate.split(" ")
+                split_candidate = [stemmer.stem(candidate) for candidate in candidate.split(" ")] if stemmer else candidate.split(" ")
                 embed = model.embed(split_candidate)
                 self.candidate_set_embed.append(np.mean(embed, axis=0))
 
-    def extract_candidates(self, min_len : int = 5, grammar : str = ""):
+    def extract_candidates(self, min_len : int = 5, grammar : str = "", lemmer : Callable = None):
         """
         Method that uses Regex patterns on POS tags to extract unique candidates from a tagged document and 
         stores the sentences each candidate occurs in
@@ -159,26 +157,31 @@ class Document:
         for i in range(len(np_trees)):
             for subtree in np_trees[i].subtrees(filter = lambda t : t.label() == 'NP'):
                 candidate = ' '.join(word for word, tag in subtree.leaves())
-
                 if len(candidate) >= min_len:
-                    if candidate not in candidate_sents:
-                        candidate_sents[candidate] = {i}
+                    l_candidate = lemmer.lemmatize(candidate) if lemmer else candidate
+
+                    if l_candidate not in candidate_sents:
+                        candidate_sents[l_candidate] = [(i,candidate.split(" "))]
                     else:
-                        candidate_sents[candidate].add(i)
+                        candidate_sents[l_candidate].append((i, candidate.split(" ")))
 
         self.candidate_set = list(candidate_sents.keys())
         self.candidate_sents = candidate_sents
 
-    def top_n_candidates(self, model, top_n: int = 5, min_len : int = 5, stemming : bool = False, **kwargs) -> List[Tuple]:
+    def top_n_candidates(self, model, top_n: int = 5, min_len : int = 5, stemmer : Callable = None, **kwargs) -> List[Tuple]:
        
         cand_mode = "" if "cand_mode" not in kwargs else kwargs["cand_mode"]
 
-        self.embed_doc(model, stemming, "" if "doc_mode" not in kwargs else kwargs["doc_mode"])
+        t = time.time()
+        self.embed_doc(model, stemmer, "" if "doc_mode" not in kwargs else kwargs["doc_mode"])
+        print(f'Embed Doc = {time.time() -  t:.2f}')
 
         if cand_mode != "":
-            self.embed_sents_words(model, stemming, False if "memory" not in kwargs else kwargs["memory"])
+            self.embed_sents_words(model, stemmer, False if "embed_memory" not in kwargs else kwargs["embed_memory"])
 
-        self.embed_candidates(model, stemming, cand_mode)
+        t = time.time()
+        self.embed_candidates(model, stemmer, cand_mode)
+        print(f'Embed Candidates = {time.time() -  t:.2f}')
 
         doc_sim = []
         if "MMR" not in kwargs:
