@@ -1,5 +1,7 @@
 import itertools
+from pickle import TRUE
 import time
+from models.candidate_extract.candidate_extract_model import CandidateExtract
 import numpy as np
 
 from itertools import product
@@ -80,31 +82,37 @@ class EmbedRank(BaseKPModel):
 #        p = True
 
 spacy.require_gpu()
-dataset_obj = DataSet(["NUS"])
-model = EmbedRank("paraphrase-mpnet-base-v2", "en_core_web_trf")
+#dataset_obj = DataSet(["Inspec", "NUS", "DUC"])
+dataset_obj = DataSet(["Inspec"])
+
+#"paraphrase-mpnet-base-v2", "en_core_web_trf"
+#"paraphrase-multilingual-mpnet-base-v2", "en_core_web_trf"
+embeds_model, pos_tagger_model = "paraphrase-mpnet-base-v2", "en_core_web_trf"
+
+#model = CandidateExtract(f'{embeds_model}', f'{pos_tagger_model}')
+model = EmbedRank(f'{embeds_model}', f'{pos_tagger_model}')
 
 #for dataset in dataset_obj.dataset_content:
-    #model.tagger.pos_tag_to_file(dataset_obj.dataset_content[dataset], f'{POS_TAG_DIR}{dataset}/en_core_web_trf/', 57)
+#    model.tagger.pos_tag_to_file(dataset_obj.dataset_content[dataset], f'{POS_TAG_DIR}{dataset}/{pos_tagger_model}/', 0)
 
 #mem = EmbeddingsMemory(dataset_obj)
-#mem.save_embeddings(dataset_obj, model.model, "paraphrase-mpnet-base-v2", EMBEDS_DIR, POS_tagger_spacy("en_core_web_trf"), False, 37)
-
+#mem.save_embeddings(dataset_obj, model.model, f'{embeds_model}', EMBEDS_DIR, POS_tagger_spacy(f'{pos_tagger_model}'), False, 14)
 
 #options = itertools.product(["AvgPool", "WeightAvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
-#options = itertools.product(["WeightAvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
-options = itertools.product(["WeightAvgPool"], ["AvgPool"])
-#options = itertools.product(["WeightAvgPool"], ["NormAvgPool"])
+options = itertools.product(["AvgPool"], [""])
 
 for d_mode, c_mode in options:
     res = {}
     for dataset in dataset_obj.dataset_content:
-        pos_tag_memory_dir = f'{POS_TAG_DIR}{dataset}/en_core_web_trf/'
-        embed_memory_dir = f'{EMBEDS_DIR}{dataset}/paraphrase-mpnet-base-v2/'
+        pos_tag_memory_dir = f'{POS_TAG_DIR}{dataset}/{pos_tagger_model}/'
+        embed_memory_dir = f'{EMBEDS_DIR}{dataset}/{embeds_model}/'
 
-        res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:1], 15, 5, False,  False,\
+        res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], 15, 5, False,  False,\
         doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir)
 
-        #res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:5], 15, 5, False, doc_mode = d_mode, cand_mode = c_mode)
+        #res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], 15, 5, False, doc_mode = d_mode, cand_mode = c_mode)
+
+        #res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], 15, 5, False)
 
     evaluate_kp_extraction(extract_res_labels(res, PorterStemmer()), extract_dataset_labels(dataset_obj.dataset_content, PorterStemmer(), None), \
     model.name, False, True, doc_mode = d_mode, cand_mode = c_mode)

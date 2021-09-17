@@ -78,6 +78,14 @@ class POS_tagger_spacy(POS_tagger):
                     tagged_text[-1].append((token.text, token.pos_))
                     doc_word_sents[-1].append(token.text)
 
+        for sent in tagged_text:
+                for i in range(1, len(sent)-1):
+                    if i + 1 < len(sent):
+                        if sent[i][0] == '-':
+                            sent[i] = (f'{sent[i-1][0]}-{sent[i+1][0]}', 'NOUN')
+                            del sent[i+1]
+                            del sent[i-1] 
+
         return (tagged_text, list(doc.sents), doc_word_sents)
 
     def pos_tag_to_file(self, input_docs : List[str], output_path : str = "", index : int = 0) -> None:

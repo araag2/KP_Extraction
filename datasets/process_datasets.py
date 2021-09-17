@@ -73,6 +73,9 @@ class DataSet:
                     ref_file = open("{}/references/{}.{}.json".format(dataset_dir, subset, ref_suffix))
                     refs = json.load(ref_file)
 
+                    #subst_table = { "-LSB-" : "(", "-LRB-" : "(", "-RRB-" : ")", "-RSB-" : ")", "p." : "page", }
+                    subst_table = {}
+
                     for file in os.listdir(subset_dir):
                         if file[:-4] not in refs:
                             raise RuntimeError("Can't find key-phrases for file {}".format(file))
@@ -80,21 +83,31 @@ class DataSet:
                         doc = ""
                         soup = BeautifulSoup(open("{}/{}".format(subset_dir,file)).read(), "xml")
 
-                        content = soup.find_all('journal-title') 
-                        for word in content:
-                            doc += "{}. ".format(re.sub(r'Figs?\.*\s*[0-9]*\.*', r'Fig ', word.get_text()))
+                        #content = soup.find_all('journal-title') 
+                        #for word in content:
+                        #    doc += "{}. ".format(re.sub(r'Figs?\.*\s*[0-9]*\.*', r'Fig ', word.get_text()))
                             
-                        content = soup.find_all('p') 
-                        for word in content:
-                            doc += "{} ".format(re.sub(r'Figs?\.*\s*[0-9]*\.*', r'Fig ', word.get_text()))
+                        #content = soup.find_all('p') 
+                        #for word in content:
+                        #    doc += "{} ".format(re.sub(r'Figs?\.*\s*[0-9]*\.*', r'Fig ', word.get_text()))
 
-                        content = soup.find_all(['article-title ', 'title'])
+                        #content = soup.find_all(['article-title ', 'title'])
+                        #for word in content:
+                        #    doc += "{}. ".format(re.sub(r'Figs?\.*\s*[0-9]*\.*', r'Fig ', word.get_text()))
+
+                        content = soup.find_all('word')
                         for word in content:
-                            doc += "{}. ".format(re.sub(r'Figs?\.*\s*[0-9]*\.*', r'Fig ', word.get_text()))
+                            text = word.get_text()
+                            for key in subst_table:
+                                text = re.sub(f'{key}', f'{subst_table[key]}', text)
+                            doc += f'{text} '
 
                         res.append((doc, [r[0] for r in refs[file[:-4]]]))
 
-                        print("doc")
+                        print(f'doc number {file[:-4]}')
+                        #print(doc)
+                        #print(f'{res[-1][1]} \n')
+                        
 
             write_to_file(p_data_path, res)
         return res
@@ -103,7 +116,7 @@ class DataSet:
         return self.extract_from_dataset(unsupervised, "DUC", "reader")
 
     def Inspec_dataset(self, unsupervised: bool = True) -> Tuple[List[str],List[List[str]]]:
-        return self.extract_from_dataset(unsupervised, "Inspec", "contr")
+        return self.extract_from_dataset(unsupervised, "Inspec", "uncontr")
         
     def NUS_dataset(self, unsupervised: bool = True) -> Tuple[List[str],List[List[str]]]:
         return self.extract_from_dataset(unsupervised, "NUS", "combined")

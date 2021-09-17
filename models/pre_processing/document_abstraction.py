@@ -35,6 +35,7 @@ class Document:
 
         self.raw_text = raw_text
         self.punctuation_regex = "[!\"#\$%&'\(\)\*\+,\.\/:;<=>\?@\[\]\^_`{\|}~\-\–\—\‘\’\“\”]"
+        self.single_word_grammar = {'PROPN', 'NOUN', 'ADJ'}
         self.doc_sents = []
         self.id = id
 
@@ -55,7 +56,7 @@ class Document:
         else:
             self.doc_sents_words_embed = read_from_file(f'{memory}/{self.id}')
 
-    def embed_doc(self, model, stemmer : Callable = None, doc_mode: str = ""):
+    def embed_doc(self, model, stemmer : Callable = None, doc_mode: str = "AvgPool"):
         """
         Method that embeds the document, having several modes according to usage. 
             AvgPool embed each sentence seperately and takes the Avg of all embeddings as the final document result.
@@ -156,14 +157,22 @@ class Document:
 
         for i in range(len(np_trees)):
             for subtree in np_trees[i].subtrees(filter = lambda t : t.label() == 'NP'):
-                candidate = ' '.join(word for word, tag in subtree.leaves())
-                if len(candidate) >= min_len:
-                    l_candidate = lemmer.lemmatize(candidate) if lemmer else candidate
+                
+                temp_cand_set = []
+                temp_cand_set.append(' '.join(word for word, tag in subtree.leaves()))
 
-                    if l_candidate not in candidate_sents:
-                        candidate_sents[l_candidate] = [(i,candidate.split(" "))]
-                    else:
-                        candidate_sents[l_candidate].append((i, candidate.split(" ")))
+                for word, tag in subtree.leaves():
+                    if tag in self.single_word_grammar:
+                        temp_cand_set.append(word) 
+
+                for candidate in temp_cand_set:
+                    if len(candidate) >= min_len:
+                        l_candidate = lemmer.lemmatize(candidate) if lemmer else candidate
+
+                        if l_candidate not in candidate_sents:
+                            candidate_sents[l_candidate] = [(i,candidate.split(" "))]
+                        else:
+                            candidate_sents[l_candidate].append((i, candidate.split(" ")))
 
         self.candidate_set = list(candidate_sents.keys())
         self.candidate_sents = candidate_sents
@@ -173,7 +182,7 @@ class Document:
         cand_mode = "" if "cand_mode" not in kwargs else kwargs["cand_mode"]
 
         t = time.time()
-        self.embed_doc(model, stemmer, "" if "doc_mode" not in kwargs else kwargs["doc_mode"])
+        self.embed_doc(model, stemmer, "AvgPool" if "doc_mode" not in kwargs else kwargs["doc_mode"])
         print(f'Embed Doc = {time.time() -  t:.2f}')
 
         if cand_mode != "":
