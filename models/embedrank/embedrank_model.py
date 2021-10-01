@@ -1,13 +1,14 @@
 import itertools
 from pickle import TRUE
 import time
-from models.candidate_extract.candidate_extract_model import CandidateExtract
+
 import numpy as np
 
 from itertools import product
 from typing import List, Tuple, Set
 from nltk.stem import PorterStemmer
 from nltk.stem import WordNetLemmatizer
+from thinc.api import set_gpu_allocator, require_gpu
 
 from keybert.mmr import mmr
 
@@ -16,6 +17,7 @@ from models.pre_processing.pos_tagging import POS_tagger_spacy
 from models.pre_processing.pre_processing_utils import remove_punctuation, remove_whitespaces
 from models.pre_processing.document_abstraction import Document
 from models.pre_processing.dataset_embeddings_memory import EmbeddingsMemory
+from models.candidate_extract.candidate_extract_model import CandidateExtract
 
 from datasets.process_datasets import *
 
@@ -81,13 +83,16 @@ class EmbedRank(BaseKPModel):
 #    if "KP" in line:
 #        p = True
 
-spacy.require_gpu()
+
+#set_gpu_allocator("pytorch")
+#require_gpu(0)
+#spacy.require_gpu()
 #dataset_obj = DataSet(["Inspec", "NUS", "DUC"])
 dataset_obj = DataSet(["Inspec"])
 
-#"paraphrase-mpnet-base-v2", "en_core_web_trf"
+#"all-mpnet-base-v2", "en_core_web_trf"
 #"paraphrase-multilingual-mpnet-base-v2", "en_core_web_trf"
-embeds_model, pos_tagger_model = "paraphrase-mpnet-base-v2", "en_core_web_trf"
+embeds_model, pos_tagger_model = "paraphrase-multilingual-mpnet-base-v2", "en_core_web_trf"
 
 #model = CandidateExtract(f'{embeds_model}', f'{pos_tagger_model}')
 model = EmbedRank(f'{embeds_model}', f'{pos_tagger_model}')
@@ -95,11 +100,11 @@ model = EmbedRank(f'{embeds_model}', f'{pos_tagger_model}')
 #for dataset in dataset_obj.dataset_content:
 #    model.tagger.pos_tag_to_file(dataset_obj.dataset_content[dataset], f'{POS_TAG_DIR}{dataset}/{pos_tagger_model}/', 0)
 
-#mem = EmbeddingsMemory(dataset_obj)
-#mem.save_embeddings(dataset_obj, model.model, f'{embeds_model}', EMBEDS_DIR, POS_tagger_spacy(f'{pos_tagger_model}'), False, 14)
+mem = EmbeddingsMemory(dataset_obj)
+mem.save_embeddings(dataset_obj, model.model, f'{embeds_model}', EMBEDS_DIR, POS_tagger_spacy(f'{pos_tagger_model}'), False, 0)
 
 #options = itertools.product(["AvgPool", "WeightAvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
-options = itertools.product(["AvgPool"], [""])
+options = itertools.product(["AvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
 
 for d_mode, c_mode in options:
     res = {}
@@ -115,4 +120,4 @@ for d_mode, c_mode in options:
         #res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], 15, 5, False)
 
     evaluate_kp_extraction(extract_res_labels(res, PorterStemmer()), extract_dataset_labels(dataset_obj.dataset_content, PorterStemmer(), None), \
-    model.name, False, True, doc_mode = d_mode, cand_mode = c_mode)
+    model.name, True, True, doc_mode = d_mode, cand_mode = c_mode)

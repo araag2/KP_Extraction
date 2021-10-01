@@ -40,5 +40,5 @@ def select_backend(embedding_model) -> BaseEmbedder:
     # Create a Sentence Transformer model based on a string
     if isinstance(embedding_model, str):
         return SentenceTransformerBackend(embedding_model)
-
+        
     return SentenceTransformerBackend("xlm-r-bert-base-nli-stsb-mean-tokens")

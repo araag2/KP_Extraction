@@ -127,8 +127,8 @@ class Document:
                                 sentence_embeds.append(self.doc_sents_words_embed[sentence][i+j])
 
                     if sentence_embeds == []:
-                        print(f'Error in candidate detection \n  candidate = {candidate}\n  split candidate = {split_candidate}\n  \
-                        split sentence = {self.doc_sents_words[sentence]} \n')
+                        print(f'Error in candidate detection \n  candidate = {text_candidate}\n  split sentence = {self.doc_sents_words[sentence]} \n')
+                        break
                     
                     if weight_phrase_vec != None:
                         weight_phrase_vec.append(weight_f[0](sentence + 1))
@@ -137,7 +137,10 @@ class Document:
                     np.average(sentence_embeds, axis=0, weights = [weight_f[1](word) for word in sentence_embeds])
                     embedding_list.append(sentence_embeds)
 
-                self.candidate_set_embed.append(np.average(embedding_list, axis=0, weights=weight_phrase_vec))  
+                if embedding_list != []:
+                    self.candidate_set_embed.append(np.average(embedding_list, axis=0, weights=weight_phrase_vec))
+                else:
+                    self.candidate_set_embed.append(np.zeros(len(self.candidate_set_embed[-1]), len(self.candidate_set_embed[-1][0])))
 
         else:
             for candidate in self.candidate_set:
@@ -157,16 +160,18 @@ class Document:
 
         for i in range(len(np_trees)):
             for subtree in np_trees[i].subtrees(filter = lambda t : t.label() == 'NP'):
-                
+
                 temp_cand_set = []
                 temp_cand_set.append(' '.join(word for word, tag in subtree.leaves()))
 
-                for word, tag in subtree.leaves():
-                    if tag in self.single_word_grammar:
-                        temp_cand_set.append(word) 
+                # TODO: Check this
+                #for word, tag in subtree.leaves():
+                #    if tag in self.single_word_grammar:
+                #        temp_cand_set.append(word) 
 
                 for candidate in temp_cand_set:
-                    if len(candidate) >= min_len:
+                    if len(candidate) > min_len:
+                        candidate = re.sub(r'([a-zA-Z0-9\-]+)-([a-zA-Z0-9\-]+)', r'\1 - \2', candidate)
                         l_candidate = lemmer.lemmatize(candidate) if lemmer else candidate
 
                         if l_candidate not in candidate_sents:

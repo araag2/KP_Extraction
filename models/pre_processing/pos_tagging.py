@@ -1,8 +1,7 @@
 import spacy
 import torch
 from abc import ABC, abstractmethod
-from typing import List
-from typing import Tuple
+from typing import List, Tuple
 
 
 from utils.IO import write_to_file, read_from_file
