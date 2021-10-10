@@ -2,6 +2,7 @@ import spacy
 import torch
 from abc import ABC, abstractmethod
 from typing import List, Tuple
+from os import path
 
 
 from utils.IO import write_to_file, read_from_file
@@ -88,6 +89,9 @@ class POS_tagger_spacy(POS_tagger):
         return (tagged_text, list(doc.sents), doc_word_sents)
 
     def pos_tag_to_file(self, input_docs : List[str], output_path : str = "", index : int = 0) -> None:
+        if not path.isdir(output_path):
+                path.mkdir(output_path)
+
         for i in range(index, len(input_docs)):
                 torch.cuda.empty_cache()
                 write_to_file(f'{output_path}{i}', self.pos_tag_str(input_docs[i][0]))
