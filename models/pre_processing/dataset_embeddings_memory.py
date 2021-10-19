@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from os import path
+import os
 
 from nltk.stem import PorterStemmer
 from typing import List, Tuple, Set
@@ -34,8 +34,8 @@ class EmbeddingsMemory:
         for dataset in dataset_obj.dataset_content:
             dir = f'{save_dir}{dataset}/{embeds}/'
 
-            if not path.isdir(dir):
-                path.mkdir(dir)
+            if not os.path.isdir(dir):
+                os.mkdir(dir)
 
             for i in range(start_index, len(dataset_obj.dataset_content[dataset])):
                 torch.cuda.empty_cache()

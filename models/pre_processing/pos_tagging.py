@@ -1,8 +1,9 @@
 import spacy
 import torch
+import os
 from abc import ABC, abstractmethod
 from typing import List, Tuple
-from os import path
+
 
 
 from utils.IO import write_to_file, read_from_file
@@ -50,6 +51,7 @@ class POS_tagger_spacy(POS_tagger):
     """
     def __init__(self, model):
         self.tagger = spacy.load(model)
+        self.name = model
 
     def pos_tag_str(self, text: str = "") -> spacy.tokens.doc.Doc:
         return self.tagger(text)
@@ -71,26 +73,32 @@ class POS_tagger_spacy(POS_tagger):
         
         for sent in doc.sents:
             if sent.text.strip():
-                tagged_text.append([])
-                doc_word_sents.append([])
+                tagged_text_s = []
+                doc_word_sents_s = []
 
                 for token in sent:
-                    tagged_text[-1].append((token.text, token.pos_))
-                    doc_word_sents[-1].append(token.text)
+                    tagged_text_s.append((token.text, token.pos_))
+                    doc_word_sents_s.append(token.text)
 
-        for sent in tagged_text:
-                for i in range(1, len(sent)-1):
-                    if i + 1 < len(sent):
-                        if sent[i][0] == '-':
-                            sent[i] = (f'{sent[i-1][0]}-{sent[i+1][0]}', 'NOUN')
-                            del sent[i+1]
-                            del sent[i-1] 
+                for i in range(1, len(doc_word_sents_s)-1):
+                    if i + 1 < len(doc_word_sents_s):
+                        if doc_word_sents_s[i] == '-':
+                            tagged_text_s[i] = (f'{doc_word_sents_s[i-1]}-{doc_word_sents_s[i+1]}', 'NOUN')
+                            del tagged_text_s[i+1]
+                            del tagged_text_s[i-1]
+
+                            doc_word_sents_s[i] = f'{doc_word_sents_s[i-1]}-{doc_word_sents_s[i+1]}'
+                            del doc_word_sents_s[i+1]
+                            del doc_word_sents_s[i-1]
+
+                tagged_text.append(tagged_text_s)
+                doc_word_sents.append(doc_word_sents_s) 
 
         return (tagged_text, list(doc.sents), doc_word_sents)
 
     def pos_tag_to_file(self, input_docs : List[str], output_path : str = "", index : int = 0) -> None:
-        if not path.isdir(output_path):
-                path.mkdir(output_path)
+        if not os.path.isdir(output_path):
+            os.mkdir(output_path)
 
         for i in range(index, len(input_docs)):
                 torch.cuda.empty_cache()

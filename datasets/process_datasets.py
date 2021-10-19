@@ -32,31 +32,47 @@ class DataSet:
         """
 
         self.dataset_content = {}
-        self.supported_datasets = {"DUC", "NUS", "Inspec", "PT-KP", "PubMed", "ES-CACIC", "ES-WICC", "FR-WIKI", "DE-TeKET"}
+        self.supported_datasets = {"DUC"      : "xml", 
+                                   "NUS"      : "xml", 
+                                   "Inspec"   : "xml",
+                                   "PT-KP"    : "xml",
+                                   "PubMed"   : "xml",
+                                   "ES-CACIC" : "txt", 
+                                   "ES-WICC"  : "txt", 
+                                   "FR-WIKI"  : "txt", 
+                                   "DE-TeKET" : "txt"}
+
         self.data_subset = ["train", "dev", "test"]
 
         for dataset in datasets:
             if dataset not in self.supported_datasets:
-                raise ValueError("Requested datset {} is not in the implemented set {}".format(dataset, self.supported_datasets))
+                raise ValueError(f'Requested dataset {dataset} is not implemented. \n Set = {self.supported_datasets}')
 
             else:
-                return self.extract_from_dataset(dataset)
+                self.dataset_content[dataset] =  self.extract_from_dataset(dataset, self.supported_datasets[dataset])
 
-    def extract_from_dataset(self, dataset_name: str = "DUC") -> List[Tuple[str,List[str]]]:
-        dataset_dir = "{}/raw_data/{}".format(DATASET_DIR, dataset_name)
-        res = []
+    def extract_from_dataset(self, dataset_name: str = "DUC", data_t : str = "xml") -> List[Tuple[str,List[str]]]:
+        dataset_dir = f'{DATASET_DIR}/raw_data/{dataset_name}'
         
-        p_data_path = "{}/processed_data/{}/{}_processed".format(DATASET_DIR, dataset_name, dataset_name)
+        p_data_path = f'{DATASET_DIR}/processed_data/{dataset_name}/{dataset_name}_processed'
 
-        if os.path.isfile("{}.txt".format(p_data_path)):
+        if os.path.isfile(f'{p_data_path}.txt'):
             return read_from_file(p_data_path)
+
+        res = self.extract_xml(dataset_dir) if data_t == "xml" else self.extract_txt(dataset_dir)     
+        write_to_file(p_data_path, res)
+
+        return res
+
+    def extract_xml(self, dataset_dir):
+        res = []
 
         dir_cont = os.listdir(dataset_dir)
         for subset in self.data_subset:
             if subset in dir_cont:
-                subset_dir = "{}/{}".format(dataset_dir,subset)
+                subset_dir = f'{dataset_dir}/{subset}'
                 
-                ref_file = open("{}/references/{}.json".format(dataset_dir, subset))
+                ref_file = open(f'{dataset_dir}/references/{subset}.json')
                 refs = json.load(ref_file)
 
                 #subst_table = { "-LSB-" : "(", "-LRB-" : "(", "-RRB-" : ")", "-RSB-" : ")", "p." : "page", }
@@ -64,10 +80,10 @@ class DataSet:
 
                 for file in os.listdir(subset_dir):
                     if file[:-4] not in refs:
-                        raise RuntimeError("Can't find key-phrases for file {}".format(file))
+                        raise RuntimeError(f'Can\'t find key-phrases for file {file}')
 
                     doc = ""
-                    soup = BeautifulSoup(open("{}/{}".format(subset_dir,file)).read(), "xml")
+                    soup = BeautifulSoup(open(f'{subset_dir}/{file}').read(), "xml")
 
                     #content = soup.find_all('journal-title') 
                     #for word in content:
@@ -93,6 +109,19 @@ class DataSet:
                     print(f'doc number {file[:-4]}')
                     #print(doc)
                     #print(f'{res[-1][1]} \n')
-                    
-        write_to_file(p_data_path, res)
+        return res
+
+    def extract_txt(self, dataset_dir):
+        res = []
+
+        dir_cont = os.listdir(dataset_dir)
+        for subset in self.data_subset:
+            if subset in dir_cont:
+                subset_dir = f'{dataset_dir}/{subset}'
+
+                for file in os.listdir(subset_dir):
+                    doc = open(f'{subset_dir}/{file}', 'r', encoding='utf-8').read()
+                    kp = [line.rstrip() for line in open(f'{dataset_dir}/references/{file[:-4]}.txt', 'r', encoding='utf-8').readlines() if line.strip()]
+                    res.append((doc, kp))
+                    print(f'doc number {file[:-4]}')
         return res

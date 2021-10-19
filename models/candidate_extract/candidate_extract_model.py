@@ -5,6 +5,7 @@ from typing import List, Tuple, Set
 
 from keybert.mmr import mmr
 from models.base_KP_model import BaseKPModel
+from models.pre_processing.language_mapping import choose_tagger, choose_lemmatizer
 from models.pre_processing.pos_tagging import POS_tagger_spacy
 
 class CandidateExtract (BaseKPModel):
@@ -20,6 +21,9 @@ class CandidateExtract (BaseKPModel):
         self.grammar = """  NP: 
         {<PROPN|NOUN|ADJ>*<PROPN|NOUN>+<ADJ>*}"""
         self.single_word_grammar = {'PROPN', 'NOUN', 'ADJ'}
+
+    def update_tagger(self, dataset : str = "") -> None:
+        self.tagger = POS_tagger_spacy(choose_tagger(dataset)) if choose_tagger(dataset) != self.tagger.name else self.tagger
 
     def pos_tag_doc(self, doc : str = "", stemming : bool = True, **kwargs) -> List[List[Tuple]]:
         """
