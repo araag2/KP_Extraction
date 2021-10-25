@@ -1,6 +1,7 @@
 import time
 import re
 import numpy as np
+import simplemma
 
 from nltk import RegexpParser
 from sklearn.metrics.pairwise import cosine_similarity
@@ -159,20 +160,19 @@ class Document:
         np_trees = list(parser.parse_sents(self.tagged_text))
 
         for i in range(len(np_trees)):
+            temp_cand_set = []
             for subtree in np_trees[i].subtrees(filter = lambda t : t.label() == 'NP'):
-
-                temp_cand_set = []
                 temp_cand_set.append(' '.join(word for word, tag in subtree.leaves()))
 
-                for candidate in temp_cand_set:
-                    if len(candidate) > min_len:
-                        #candidate = re.sub(r'([a-zA-Z0-9\-]+)-([a-zA-Z0-9\-]+)', r'\1 - \2', candidate)
-                        l_candidate = lemmer.lemmatize(candidate) if lemmer else candidate
+            for candidate in temp_cand_set:
+                if len(candidate) > min_len:
+                    #candidate = re.sub(r'([a-zA-Z0-9\-]+)-([a-zA-Z0-9\-]+)', r'\1 - \2', candidate)
+                    l_candidate = simplemma.lemmatize(candidate, lemmer) if lemmer else candidate
 
-                        if l_candidate not in candidate_sents:
-                            candidate_sents[l_candidate] = [(i,candidate.split(" "))]
-                        else:
-                            candidate_sents[l_candidate].append((i, candidate.split(" ")))
+                    if l_candidate not in candidate_sents:
+                        candidate_sents[l_candidate] = [(i,candidate.split(" "))]
+                    else:
+                        candidate_sents[l_candidate].append((i, candidate.split(" ")))
 
         self.candidate_set = list(candidate_sents.keys())
         self.candidate_sents = candidate_sents

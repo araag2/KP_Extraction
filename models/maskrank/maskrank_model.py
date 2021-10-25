@@ -5,15 +5,15 @@ from nltk.stem import PorterStemmer
 from datasets.process_datasets import *
 
 from models.base_KP_model import BaseKPModel
-from models.embedrank.embedrank_document_abstraction import Document
+from models.maskrank.maskrank_document_abstraction import Document
 
 from models.pre_processing.language_mapping import choose_tagger, choose_lemmatizer
 from models.pre_processing.pos_tagging import POS_tagger_spacy
 from models.pre_processing.pre_processing_utils import remove_punctuation, remove_whitespaces
 
-class EmbedRank(BaseKPModel):
+class MaskRank(BaseKPModel):
     """
-    Simple class to encapsulate EmbedRank functionality. Uses
+    Simple class to encapsulate MaskRank functionality. Uses
     the KeyBert backend to retrieve models
     """
 

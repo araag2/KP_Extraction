@@ -46,7 +46,7 @@ class BaseKPModel:
         """
         pass
 
-    def extract_kp_from_corpus(self, corpus, top_n=5, min_len=0, stemming=True, **kwargs) -> List[List[Tuple]]:
+    def extract_kp_from_corpus(self, corpus, dataset, top_n=5, min_len=0, stemming=True, **kwargs) -> List[List[Tuple]]:
         """
         Concrete method that extracts key-phrases from a list of given documents, with optional arguments
         relevant to its specific functionality

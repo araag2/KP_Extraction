@@ -23,7 +23,7 @@ def test_extract_kp_single_doc(top_n):
     """ Test extraction of single document method """
 
     model = EmbedRank("paraphrase-MiniLM-L6-v2", "en_core_web_sm")
-    kp = model.extract_kp_from_doc(doc_one, top_n, 0, True)
+    kp = model.extract_kp_from_doc(doc_one, top_n, 0)
 
     assert isinstance(model, EmbedRank)
     
@@ -42,7 +42,7 @@ def test_extract_kp_corpus(top_n):
     """ Test extraction of two documents """
 
     model = EmbedRank("paraphrase-MiniLM-L6-v2", "en_core_web_sm")
-    kp = model.extract_kp_from_corpus([[doc_one], [doc_two]], top_n)
+    kp = model.extract_kp_from_corpus([[doc_one], [doc_two]], "FR-WIKI", top_n)
 
     assert isinstance(model, EmbedRank)
     

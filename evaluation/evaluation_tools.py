@@ -110,10 +110,10 @@ def evaluate_kp_extraction(model_results : Dict[str, List] = {}, true_labels: Di
                     results_kp[f'Recall_{k}'].append(r_k)
                     results_kp[f'F1_{k}'].append(f1_k)
 
-                ap = [ len( [ k for k in top_kp[:p] if k in true_label ] ) / float( p ) for p in range(1,len(top_kp) + 1) if top_kp[p - 1] in true_label ]
+                ap = [ len( [ k for k in top_kp[:i] if k in true_label ] ) / float( i ) for i in range(1,len(top_kp) + 1) if top_kp[i - 1] in true_label ]
                 map = np.sum(ap) / float( len( true_label ) )
-                ndcg = np.sum( [ 1.0 / np.log2(p + 1) for p in range(1,len(top_kp) + 1) if top_kp[p - 1] in true_label ] )
-                ndcg = ndcg / np.sum( [ 1.0 / np.log2(p + 1) for p in range(1,len(true_label) + 1) ] )
+                ndcg = np.sum( [ 1.0 / np.log2(i + 1) for i in range(1,len(top_kp) + 1) if top_kp[i - 1] in true_label ] )
+                ndcg = ndcg / np.sum( [ 1.0 / np.log2(i + 1) for i in range(1,len(true_label) + 1) ] )
 
                 results_kp["MAP"].append(map)	
                 results_kp["nDCG"].append(ndcg)	
