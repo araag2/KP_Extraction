@@ -112,11 +112,11 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
                 doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir, ensemble = "MaskAll")
         
             else: 
-                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:2], dataset, 15, 5, False, doc_mode = d_mode, cand_mode = c_mode)
-
+                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, False, doc_mode = d_mode, cand_mode = c_mode)
+                print(res[dataset])
 
         evaluate_kp_extraction(extract_res_labels(res, PorterStemmer()), extract_dataset_labels(dataset_obj.dataset_content, PorterStemmer(), None), \
-        model.name, True, True)
+        fusion_model.name, True, True)
 
     return
         
