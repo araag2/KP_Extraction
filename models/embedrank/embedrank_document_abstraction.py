@@ -4,6 +4,7 @@ import numpy as np
 import simplemma
 
 from nltk import RegexpParser
+from sklearn.preprocessing import normalize
 from sklearn.metrics.pairwise import cosine_similarity
 from typing import List, Tuple, Set, Callable
 
@@ -80,7 +81,7 @@ class Document:
                 if weight_vec != None:
                     weight_vec.append(weight_f(i))
 
-            self.doc_embed = np.average(doc_sents_embed, axis=0, weights = weight_vec)
+            return np.average(doc_sents_embed, axis=0, weights = weight_vec)
 
         elif doc_mode =="Segmented":
             segmented_doc = [self.raw_text[i:i+512] for i in range(0, len(self.raw_text), 512)]
@@ -89,10 +90,10 @@ class Document:
             for sentence in segmented_doc:
                  segmented_doc_embeds.append(model.embed(stemmer.stem(sentence)) if stemmer else model.embed(sentence))
 
-            self.doc_embed = np.mean(segmented_doc_embeds, axis=0)
+            return np.mean(segmented_doc_embeds, axis=0)
 
         else:
-            self.doc_embed = model.embed(stemmer.stem(self.raw_text)) if stemmer else model.embed(self.raw_text)
+            return model.embed(stemmer.stem(self.raw_text)) if stemmer else model.embed(self.raw_text)
 
     def embed_candidates(self, model, stemmer : Callable = None, cand_mode: str = ""):
         """
@@ -182,7 +183,7 @@ class Document:
         cand_mode = "" if "cand_mode" not in kwargs else kwargs["cand_mode"]
 
         t = time.time()
-        self.embed_doc(model, stemmer, "AvgPool" if "doc_mode" not in kwargs else kwargs["doc_mode"])
+        self.doc_embed = self.embed_doc(model, stemmer, "AvgPool" if "doc_mode" not in kwargs else kwargs["doc_mode"])
         print(f'Embed Doc = {time.time() -  t:.2f}')
 
         if cand_mode != "":
@@ -199,6 +200,23 @@ class Document:
             n = len(self.candidate_set) if len(self.candidate_set) < top_n else top_n
             doc_sim = mmr(self.doc_embed.reshape(1, -1), self.candidate_set_embed, self.candidate_set, n, kwargs["MMR"])
 
-        candidate_score = sorted([(self.candidate_set[i], doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
+        if "ensemble" in kwargs and kwargs["ensemble"] == "MaskAll":
+            candidate_maskrank_score = []
+            masked_base_doc = model.embed(self.raw_text).reshape(1, -1)
+            for i in range(len(doc_sim)):
+                #print(f'candidate = {self.candidate_set[i]}')
+                masked_candidate_doc = model.embed(re.sub(re.sub('[\[\\\(\+\*\?\{\}\)\]]', '', self.candidate_set[i]), "[MASK]", self.raw_text)).reshape(1, -1)
+                sim = 1 - cosine_similarity(masked_candidate_doc, masked_base_doc)
+                #print(f'Doc id =  {i}')
+                #print(f'    MaskSim with doc embed =  {sim}')
+                #print(f'    EmbedSim with doc embed =  {doc_sim[i][0]}')
+                candidate_maskrank_score.append(sim)
 
-        return candidate_score[:top_n], self.candidate_set
+            candidate_maskrank_score = [s[0][0] for s in candidate_maskrank_score]
+            candidate_maskrank_score = candidate_maskrank_score / np.sum(candidate_maskrank_score)
+            candidate_score = sorted([(self.candidate_set[i], candidate_maskrank_score[i] + doc_sim[i][0]) for i in range(len(doc_sim))], 
+            reverse=True, key= lambda x: x[1])
+        else:
+            candidate_score = sorted([(self.candidate_set[i], doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
+
+        return candidate_score[:top_n], self.candidate_set if top_n != -1 else candidate_score, self.candidate_set

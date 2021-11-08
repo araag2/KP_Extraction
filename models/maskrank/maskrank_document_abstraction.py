@@ -27,16 +27,11 @@ class Document:
 
             self.tagged_text -> The entire document divided by sentences with POS tags in each word
             self.candidate_set -> Set of candidates in list form, according to the supplied grammar
-            self.candidate_set_sents -> Lists of sentences where candidates occur in the document
-
-            self.doc_embed -> Document in embedding form
-            self.doc_sents_words_embed -> Document in list form divided by sentences, each sentence in embedding form, word piece by word piece
             self.candidate_set_embed -> Set of candidates in list form, according to the supplied grammar, in embedding form
         """
 
         self.raw_text = raw_text
         self.punctuation_regex = "[!\"#\$%&'\(\)\*\+,\.\/:;<=>\?@\[\]\^_`{\|}~\-\–\—\‘\’\“\”]"
-        self.single_word_grammar = {'PROPN', 'NOUN', 'ADJ'}
         self.doc_sents = []
         self.id = id
 
@@ -49,24 +44,26 @@ class Document:
 
     def embed_doc(self, model, stemmer : Callable = None):
         """
-        Method that embeds the document, having several modes according to usage. 
-            AvgPool embed each sentence seperately and takes the Avg of all embeddings as the final document result.
-            Segmented embeds the document in segments of up to 512 characters, pooling the Avg for doc representation.
-            The default value just embeds the document normally.
+        Method that embeds the document.
         """
 
-        self.doc_embed = model.embed(stemmer.stem(self.raw_text)) if stemmer else model.embed(self.raw_text)
+        return model.embed(stemmer.stem(self.raw_text)) if stemmer else model.embed(self.raw_text)
 
-    def embed_candidates(self, model, stemmer : Callable = None):
+    def embed_candidates(self, model, stemmer : Callable = None, cand_mode: str = "MaskAll"):
         """
         Method that embeds the current candidate set, having several modes according to usage. 
-            AvgPool embed each sentence seperately and takes the Avg of all embeddings of sentences where the candidate occurs.
-            The default value just embeds candidates directly.
+            cand_mode
+            | MaskFirst only masks the first occurence of a candidate;
+            | MaskAll masks all occurences of said candidate
+
+            The default value is MaskAll.
         """
         self.candidate_set_embed = []
+        occurences = 1 if cand_mode == "MaskFirst" else 0
 
         for candidate in self.candidate_set:
-                embed = model.embed(re.sub(candidate, "[MASK]", self.raw_text))
+                candidate = re.sub('[\[\\\(\+\*\?\{\}\)\]]', '', candidate)
+                embed = model.embed(re.sub(candidate, "[MASK]", self.raw_text, occurences))
                 self.candidate_set_embed.append(embed)
 
     def extract_candidates(self, min_len : int = 5, grammar : str = "", lemmer : Callable = None):
@@ -93,15 +90,18 @@ class Document:
     def top_n_candidates(self, model, top_n: int = 5, min_len : int = 5, stemmer : Callable = None, **kwargs) -> List[Tuple]:
 
         t = time.time()
-        self.embed_doc(model, stemmer)
+        self.doc_embed = self.embed_doc(model, stemmer)
         print(f'Embed Doc = {time.time() -  t:.2f}')
 
         t = time.time()
-        self.embed_candidates(model, stemmer)
+        self.embed_candidates(model, stemmer, "MaskAll" if "cand_mode" not in kwargs else kwargs["cand_mode"])
         print(f'Embed Candidates = {time.time() -  t:.2f}')
 
         doc_sim = np.absolute(cosine_similarity(self.candidate_set_embed, self.doc_embed.reshape(1, -1)))
 
         candidate_score = sorted([(self.candidate_set[i], 1 - doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
 
-        return candidate_score[:top_n], self.candidate_set
+        if top_n == -1:
+            return candidate_score, self.candidate_set
+
+        return candidate_score[:top_n], self.candidate_set if top_n != -1 else candidate_score, self.candidate_set
