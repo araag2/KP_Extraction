@@ -219,4 +219,7 @@ class Document:
         else:
             candidate_score = sorted([(self.candidate_set[i], doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
 
-        return candidate_score[:top_n], self.candidate_set if top_n != -1 else candidate_score, self.candidate_set
+        if top_n == -1:
+            return candidate_score, self.candidate_set
+
+        return candidate_score[:top_n], self.candidate_set

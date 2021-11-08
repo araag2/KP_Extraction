@@ -104,4 +104,4 @@ class Document:
         if top_n == -1:
             return candidate_score, self.candidate_set
 
-        return candidate_score[:top_n], self.candidate_set if top_n != -1 else candidate_score, self.candidate_set
+        return candidate_score[:top_n], self.candidate_set
