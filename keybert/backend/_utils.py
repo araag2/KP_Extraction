@@ -9,6 +9,8 @@ def select_backend(embedding_model) -> BaseEmbedder:
     Returns:
         model: Either a Sentence-Transformer or Flair model
     """
+    print(str(type(embedding_model)))
+
     # keybert language backend
     if isinstance(embedding_model, BaseEmbedder):
         return embedding_model
@@ -40,5 +42,5 @@ def select_backend(embedding_model) -> BaseEmbedder:
     # Create a Sentence Transformer model based on a string
     if isinstance(embedding_model, str):
         return SentenceTransformerBackend(embedding_model)
-        
+    
     return SentenceTransformerBackend("xlm-r-bert-base-nli-stsb-mean-tokens")

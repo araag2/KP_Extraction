@@ -59,12 +59,45 @@ class Document:
             The default value is MaskAll.
         """
         self.candidate_set_embed = []
-        occurences = 1 if cand_mode == "MaskFirst" else 0
 
-        for candidate in self.candidate_set:
-                candidate = re.sub('[\[\\\(\+\*\?\{\}\)\]]', '', candidate)
-                embed = model.embed(re.sub(candidate, "[MASK]", self.raw_text, occurences))
-                self.candidate_set_embed.append(embed)
+        if cand_mode == "MaskFirst" or cand_mode == "MaskAll":
+            occurences = 1 if cand_mode == "MaskFirst" else 0
+
+            for candidate in self.candidate_set:
+                    embed = model.embed(re.sub(re.escape(candidate), "[MASK]", self.raw_text, occurences))
+                    self.candidate_set_embed.append(embed)
+
+        elif cand_mode == "MaskHighest":
+            for candidate in self.candidate_set:
+                candidate = re.escape(candidate)
+                candidate_embeds = []
+
+                for match in re.finditer(candidate, self.raw_text):
+                    masked_text = f'{self.raw_text[:match.span()[0]]}[MASK]{self.raw_text[match.span()[1]:]}'
+                    candidate_embeds.append(model.embed(masked_text))
+                self.candidate_set_embed.append(candidate_embeds)
+
+        elif cand_mode == "MaskSubset":
+            self.candidate_set = sorted(self.candidate_set, reverse=True, key= lambda x : len(x))
+            seen_candidates = {}
+
+            for candidate in self.candidate_set:
+                prohibited_pos = []
+                len_candidate = len(candidate) 
+                for prev_candidate in seen_candidates:
+                    if len_candidate == len(prev_candidate):
+                        break
+
+                    elif candidate in prev_candidate:
+                        prohibited_pos.extend(seen_candidates[prev_candidate])
+
+                pos = []
+                for match in re.finditer(candidate, self.raw_text):
+                    pos.append((match.span()[0],match.span()[1]))
+                
+                seen_candidates[candidate] = pos
+                
+
 
     def extract_candidates(self, min_len : int = 5, grammar : str = "", lemmer : Callable = None):
         """
@@ -97,9 +130,19 @@ class Document:
         self.embed_candidates(model, stemmer, "MaskAll" if "cand_mode" not in kwargs else kwargs["cand_mode"])
         print(f'Embed Candidates = {time.time() -  t:.2f}')
 
-        doc_sim = np.absolute(cosine_similarity(self.candidate_set_embed, self.doc_embed.reshape(1, -1)))
+        doc_sim = []
+        if "cand_mode" not in kwargs or kwargs["cand_mode"] != "MaskHighest":
+            doc_sim = np.absolute(cosine_similarity(self.candidate_set_embed, self.doc_embed.reshape(1, -1)))
+        
+        elif kwargs["cand_mode"] == "MaskHighest":
+            doc_embed = self.doc_embed.reshape(1, -1)
+            for mask_cand_occur in self.candidate_set_embed:
+                if mask_cand_occur != []:
+                    doc_sim.append([np.ndarray.min(np.absolute(cosine_similarity(mask_cand_occur, doc_embed)))])
+                else:
+                    doc_sim.append([1.0])
 
-        candidate_score = sorted([(self.candidate_set[i], 1 - doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
+        candidate_score = sorted([(self.candidate_set[i], 1.0 - doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
 
         if top_n == -1:
             return candidate_score, [candidate[0] for candidate in candidate_score]

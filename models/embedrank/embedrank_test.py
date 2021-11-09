@@ -13,7 +13,7 @@ def test_empty_doc():
     model = EmbedRank("paraphrase-MiniLM-L6-v2", "en_core_web_sm")
 
     with pytest.raises(ValueError):
-        empty_extract = model.extract_kp_from_doc("", 5, 0, True)
+        empty_extract = model.extract_kp_from_doc("", 5, 0, None)
 
     assert isinstance(model, EmbedRank)
 

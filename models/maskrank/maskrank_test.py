@@ -1,66 +1,59 @@
-from typing import List, Tuple, Set
-from nltk.stem import PorterStemmer
+from typing import List
+import pytest
+import numpy
 
-from datasets.process_datasets import *
+from models.models_utils import test_data
+from models.maskrank.maskrank_model import MaskRank
 
-from models.base_KP_model import BaseKPModel
-from models.embedrank.embedrank_document_abstraction import Document
+doc_one, doc_two = test_data()
 
-from models.pre_processing.language_mapping import choose_tagger, choose_lemmatizer
-from models.pre_processing.pos_tagging import POS_tagger_spacy
-from models.pre_processing.pre_processing_utils import remove_punctuation, remove_whitespaces
+def test_empty_doc():
+    """ Test empty doc """
 
-class MaskRank(BaseKPModel):
-    """
-    Simple class to encapsulate EmbedRank functionality. Uses
-    the KeyBert backend to retrieve models
-    """
+    model = MaskRank("paraphrase-MiniLM-L6-v2", "en_core_web_sm")
 
-    def __init__(self, model, tagger):
-        super().__init__(model)
-        self.tagger = POS_tagger_spacy(tagger)
-        self.grammar = """  NP: 
-        {<PROPN|NOUN|ADJ>*<PROPN|NOUN>+<ADJ>*}"""
-        self.counter = 0
+    with pytest.raises(ValueError):
+        empty_extract = model.extract_kp_from_doc("", 5, 0, None)
 
-    def update_tagger(self, dataset : str = "") -> None:
-        self.tagger = POS_tagger_spacy(choose_tagger(dataset)) if choose_tagger(dataset) != self.tagger.name else self.tagger
+    assert isinstance(model, MaskRank)
 
-    def pre_process(self, doc = "", **kwargs) -> str:
-        """
-        Method that defines a pre_processing routine, removing punctuation and whitespaces
-        """
-        doc = remove_punctuation(doc)
-        return remove_whitespaces(doc)[1:]
 
-    def extract_kp_from_doc(self, doc, top_n, min_len, stemmer = None, lemmer = None, **kwargs) -> Tuple[List[Tuple], List[str]]:
-        """
-        Concrete method that extracts key-phrases from a given document, with optional arguments
-        relevant to its specific functionality
-        """
+@pytest.mark.parametrize("top_n", [1, 2, 3, 4, 5])
+def test_extract_kp_single_doc(top_n):
+    """ Test extraction of single document method """
 
-        doc = Document(doc, self.counter)
-        doc.pos_tag(self.tagger, False if "pos_tag_memory" not in kwargs else kwargs["pos_tag_memory"], self.counter)
-        doc.extract_candidates(min_len, self.grammar, lemmer)
+    model = MaskRank("paraphrase-MiniLM-L6-v2", "en_core_web_sm")
+    kp = model.extract_kp_from_doc(doc_one, top_n, 0)
 
-        top_n, candidate_set = doc.top_n_candidates(self.model, top_n, min_len, stemmer, **kwargs)
+    assert isinstance(model, MaskRank)
+    
+    assert isinstance(kp, tuple)
+    assert isinstance(kp[0], list)
+    assert isinstance(kp[0][0], tuple)
+    assert isinstance(kp[0][0][0], str)
+    assert isinstance(kp[0][0][1], numpy.floating)
+    assert isinstance(kp[1], list)
+    assert isinstance(kp[1][0], str)
+    assert len(kp[0]) == top_n
 
-        print(f'document {self.counter} processed\n')
-        self.counter += 1
-        torch.cuda.empty_cache()
 
-        return (top_n, candidate_set)
+@pytest.mark.parametrize("top_n", [1, 2, 3, 4, 5])
+def test_extract_kp_corpus(top_n):
+    """ Test extraction of two documents """
 
-    def extract_kp_from_corpus(self, corpus, dataset: str = "DUC", 
-    top_n: int = 15, min_len: int = 5, stemming: bool = False, lemmatize: bool = False, **kwargs) -> List[List[Tuple]]:
-        """
-        Concrete method that extracts key-phrases from a list of given documents, with optional arguments
-        relevant to its specific functionality
-        """
-        self.counter = 0
-        self.update_tagger(dataset)
+    model = MaskRank("paraphrase-MiniLM-L6-v2", "en_core_web_sm")
+    kp = model.extract_kp_from_corpus([[doc_one], [doc_two]], "FR-WIKI", top_n)
 
-        stemer = None if not stemming else PorterStemmer()
-        lemmer = None if not lemmatize else choose_lemmatizer(dataset)
+    assert isinstance(model, MaskRank)
+    
+    assert isinstance(kp, list)
 
-        return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemer, lemmer, **kwargs) for doc in corpus]
+    for i in range(2):
+        assert isinstance(kp[i], tuple)
+        assert isinstance(kp[i][0], list)
+        assert isinstance(kp[i][0][0], tuple)
+        assert isinstance(kp[i][0][0][0], str)
+        assert isinstance(kp[i][0][0][1], numpy.floating)
+        assert isinstance(kp[i][1], list)
+        assert isinstance(kp[i][1][0], str)
+        assert len(kp[i][0]) == top_n
