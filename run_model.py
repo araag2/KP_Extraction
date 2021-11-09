@@ -127,7 +127,7 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
 #dataset_obj = DataSet(["PT-KP","ES-CACIC", "ES-WICC", "FR-WIKI", "DE-TeKET"])
 #options = itertools.product(["AvgPool", "WeightAvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
 #options = itertools.product(["AvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
-options = itertools.product(["AvgPool"], ["MaskSubset"])
+options = itertools.product(["AvgPool"], ["MaskAll"])
 
 #"all-mpnet-base-v2"
 embeds_model = "paraphrase-multilingual-mpnet-base-v2"

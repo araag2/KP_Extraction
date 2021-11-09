@@ -83,7 +83,7 @@ class Document:
 
             for candidate in self.candidate_set:
                 prohibited_pos = []
-                len_candidate = len(candidate) 
+                len_candidate = len(candidate)
                 for prev_candidate in seen_candidates:
                     if len_candidate == len(prev_candidate):
                         break
@@ -92,13 +92,25 @@ class Document:
                         prohibited_pos.extend(seen_candidates[prev_candidate])
 
                 pos = []
-                for match in re.finditer(candidate, self.raw_text):
+                for match in re.finditer(re.escape(candidate), self.raw_text):
                     pos.append((match.span()[0],match.span()[1]))
                 
                 seen_candidates[candidate] = pos
+                subset_pos = []
+                for p in pos:
+                    subset_flag = True
+                    for prob in prohibited_pos:
+                        if p[0] >= prob[0] and p[1] <= prob[1]:
+                            subset_flag = False
+                            break
+                    if subset_flag:
+                        subset_pos.append(p)
+
+                masked_doc = self.raw_text
+                for i in range(len(subset_pos)):
+                    masked_doc = f'{masked_doc[:(subset_pos[i][0] + i*(len_candidate - 5))]}[MASK]{masked_doc[subset_pos[i][1] + i*(len_candidate - 5):]}'
+                self.candidate_set_embed.append(model.embed(masked_doc))
                 
-
-
     def extract_candidates(self, min_len : int = 5, grammar : str = "", lemmer : Callable = None):
         """
         Method that uses Regex patterns on POS tags to extract unique candidates from a tagged document and 
