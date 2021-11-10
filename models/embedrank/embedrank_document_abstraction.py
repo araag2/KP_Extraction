@@ -58,7 +58,7 @@ class Document:
         else:
             self.doc_sents_words_embed = read_from_file(f'{memory}/{self.id}')
 
-    def embed_doc(self, model, stemmer : Callable = None, doc_mode: str = "AvgPool"):
+    def embed_doc(self, model, stemmer : Callable = None, doc_mode: str = ""):
         """
         Method that embeds the document, having several modes according to usage. 
             AvgPool embed each sentence seperately and takes the Avg of all embeddings as the final document result.
@@ -66,7 +66,7 @@ class Document:
             The default value just embeds the document normally.
         """
 
-        if doc_mode == "AvgPool" or "WeightAvgPool":
+        if doc_mode == "AvgPool" or doc_mode == "WeightAvgPool":
             weight_factors = {"AvgPool" : None , 
                               "WeightAvgPool" : (lambda i: 1 / (i + 1))}
 
@@ -83,7 +83,7 @@ class Document:
 
             return np.average(doc_sents_embed, axis=0, weights = weight_vec)
 
-        elif doc_mode =="Segmented":
+        elif doc_mode == "Segmented":
             segmented_doc = [self.raw_text[i:i+512] for i in range(0, len(self.raw_text), 512)]
             segmented_doc_embeds = []
 
@@ -183,7 +183,7 @@ class Document:
         cand_mode = "" if "cand_mode" not in kwargs else kwargs["cand_mode"]
 
         t = time.time()
-        self.doc_embed = self.embed_doc(model, stemmer, "AvgPool" if "doc_mode" not in kwargs else kwargs["doc_mode"])
+        self.doc_embed = self.embed_doc(model, stemmer, "" if "doc_mode" not in kwargs else kwargs["doc_mode"])
         print(f'Embed Doc = {time.time() -  t:.2f}')
 
         if cand_mode != "":

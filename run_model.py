@@ -127,10 +127,11 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
 #dataset_obj = DataSet(["PT-KP","ES-CACIC", "ES-WICC", "FR-WIKI", "DE-TeKET"])
 #options = itertools.product(["AvgPool", "WeightAvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
 #options = itertools.product(["AvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
-options = itertools.product(["AvgPool"], ["MaskAll"])
+#options = itertools.product(["AvgPool"], ["MaskAll"])
+options = itertools.product([""], ["MaskAll"])
 
 #"all-mpnet-base-v2", "paraphrase-multilingual-mpnet-base-v2"
-embeds_model = "paraphrase-multilingual-mpnet-base-v2"
+embeds_model = "longformer-paraphrase-multilingual-mpnet-base-v2"
 
-run_single_model(["FR-WIKI"], embeds_model, choose_tagger("FR-WIKI"), MaskRank, False, False, options, True)
-#run_fusion_model(["FR-WIKI"], embeds_model, choose_tagger("FR-WIKI"), [EmbedRank,MaskRank], False, False, options, True)
+#run_single_model(["FR-WIKI"], embeds_model, choose_tagger("FR-WIKI"), MaskRank, False, False, options, True)
+run_fusion_model(["PT-KP"], embeds_model, choose_tagger("PT-KP"), [EmbedRank,MaskRank], False, False, options, False)
