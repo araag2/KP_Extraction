@@ -1,5 +1,4 @@
 from ._base import BaseEmbedder
-from ._sentencetransformers import SentenceTransformerBackend
 
 
 def select_backend(embedding_model) -> BaseEmbedder:
@@ -9,38 +8,44 @@ def select_backend(embedding_model) -> BaseEmbedder:
     Returns:
         model: Either a Sentence-Transformer or Flair model
     """
-    print(str(type(embedding_model)))
-
     # keybert language backend
     if isinstance(embedding_model, BaseEmbedder):
         return embedding_model
 
+    # Longformer model
+    elif "longformer" in str(embedding_model):
+        from keybert.backend._longformer import load_longformer
+        return load_longformer(embedding_model)
+
     # Flair word embeddings
-    if "flair" in str(type(embedding_model)):
+    elif "flair" in str(type(embedding_model)):
         from keybert.backend._flair import FlairBackend
         return FlairBackend(embedding_model)
 
     # Spacy embeddings
-    if "spacy" in str(type(embedding_model)):
+    elif "spacy" in str(type(embedding_model)):
         from keybert.backend._spacy import SpacyBackend
         return SpacyBackend(embedding_model)
 
     # Gensim embeddings
-    if "gensim" in str(type(embedding_model)):
+    elif "gensim" in str(type(embedding_model)):
         from keybert.backend._gensim import GensimBackend
         return GensimBackend(embedding_model)
 
     # USE embeddings
-    if "tensorflow" and "saved_model" in str(type(embedding_model)):
+    elif "tensorflow" and "saved_model" in str(type(embedding_model)):
         from keybert.backend._use import USEBackend
         return USEBackend(embedding_model)
 
     # Sentence Transformer embeddings
-    if "sentence_transformers" in str(type(embedding_model)):
+    elif "sentence_transformers" in str(type(embedding_model)):
+        from ._sentencetransformers import SentenceTransformerBackend
         return SentenceTransformerBackend(embedding_model)
 
     # Create a Sentence Transformer model based on a string
-    if isinstance(embedding_model, str):
+    elif isinstance(embedding_model, str):
+        from ._sentencetransformers import SentenceTransformerBackend
         return SentenceTransformerBackend(embedding_model)
     
+    from ._sentencetransformers import SentenceTransformerBackend
     return SentenceTransformerBackend("xlm-r-bert-base-nli-stsb-mean-tokens")

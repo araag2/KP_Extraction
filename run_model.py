@@ -6,7 +6,7 @@ import numpy as np
 from itertools import product
 from typing import List, Callable
 from nltk.stem import PorterStemmer
-from thinc.api import set_gpu_allocator, require_gpu
+#from thinc.api import set_gpu_allocator, require_gpu
 
 from models.pre_processing.dataset_embeddings_memory import EmbeddingsMemory
 from models.pre_processing.language_mapping import choose_tagger
@@ -129,9 +129,8 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
 #options = itertools.product(["AvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
 options = itertools.product(["AvgPool"], ["MaskAll"])
 
-#"all-mpnet-base-v2"
+#"all-mpnet-base-v2", "paraphrase-multilingual-mpnet-base-v2"
 embeds_model = "paraphrase-multilingual-mpnet-base-v2"
 
 run_single_model(["FR-WIKI"], embeds_model, choose_tagger("FR-WIKI"), MaskRank, False, False, options, True)
-
 #run_fusion_model(["FR-WIKI"], embeds_model, choose_tagger("FR-WIKI"), [EmbedRank,MaskRank], False, False, options, True)
