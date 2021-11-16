@@ -15,6 +15,7 @@ from models.pre_processing.pos_tagging import POS_tagger_spacy
 from models.fusion_model import FusionModel
 from models.embedrank.embedrank_model import EmbedRank
 from models.maskrank.maskrank_model import MaskRank
+from models.graphrank.graphrank_model import GraphRank
 from models.candidate_extract.candidate_extract_model import CandidateExtract
 
 from datasets.process_datasets import *
@@ -135,15 +136,15 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
 #options = itertools.product(["AvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
 #options = itertools.product(["AvgPool"], ["MaskAll"])
 
-#"all-mpnet-base-v2", "paraphrase-multilingual-mpnet-base-v2"
-embeds_model = "longformer-paraphrase-multilingual-mpnet-base-v2"
+#"all-mpnet-base-v2", "longformer-paraphrase-multilingual-mpnet-base-v2"
+embeds_model = "paraphrase-multilingual-mpnet-base-v2"
 
-run_fusion_models =["NUS", "DE-TeKET"]
+# run_fusion_models =["NUS", "DE-TeKET"]
 #run_single_models = ["ES-CACIC", "ES-WICC" ,"FR-WIKI" ,"DE-TeKET"]
-for model in run_fusion_models:
-    options = itertools.product([""], [""])
-    run_fusion_model([model], embeds_model, choose_tagger(model), [EmbedRank, MaskRank], False, False, options, True)
+#for model in run_fusion_models:
+#    options = itertools.product([""], [""])
+#    run_fusion_model([model], embeds_model, choose_tagger(model), [EmbedRank, MaskRank], False, False, options, True)
 
-#options = itertools.product([""], [""])
-#run_single_model(["ES-CACIC"], embeds_model, choose_tagger("ES-CACIC"), EmbedRank, False, False, options, True)
+options = itertools.product([""], [""])
+run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), GraphRank, False, False, options, True)
 #run_fusion_model(["DUC"], embeds_model, choose_tagger("DUC"), [EmbedRank, MaskRank], False, False, options, False)

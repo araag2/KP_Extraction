@@ -1,0 +1,26 @@
+DUC (n_docs = 308):
+    Avg_len = 4636, Min_len = 73, Max_len = 28928
+
+Inspec (n_docs = 2000):
+    Avg_len = 860, Min_len = 94, Max_len = 3220
+
+NUS (n_docs = 211):
+    Avg_len = 45664, Min_len = 10661, Max_len = 84548
+
+PubMed (n_docs = 1320):
+    Avg_len = 32901, Min_len = 1203, Max_len = 172319
+
+PT-KP (n_docs = 110):
+    Avg_len = 1804, Min_len = 73, Max_len = 5606
+
+ES-CACIC (n_docs = 888):
+    Avg_len = 25225, Min_len = 1331, Max_len = 76164
+
+ES-WICC (n_docs = 1640):
+    Avg_len = 12796, Min_len = 66, Max_len = 39715
+
+FR-WIKI (n_docs = 100):
+    Avg_len = 1744, Min_len = 777, Max_len = 6661
+
+DE-TeKET (n_docs = 10):
+    Avg_len = 69552, Min_len = 42960, Max_len = 129215
