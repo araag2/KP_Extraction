@@ -48,7 +48,6 @@ class MaskRank(BaseKPModel):
 
         print(f'document {self.counter} processed\n')
         self.counter += 1
-        torch.cuda.empty_cache()
 
         return (top_n, candidate_set)
 

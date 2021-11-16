@@ -139,7 +139,7 @@ class Document:
         print(f'Embed Doc = {time.time() -  t:.2f}')
 
         t = time.time()
-        self.embed_candidates(model, stemmer, "MaskAll" if "cand_mode" not in kwargs else kwargs["cand_mode"])
+        self.embed_candidates(model, stemmer, "MaskAll" if ("cand_mode" not in kwargs or kwargs["cand_mode"] == "") else kwargs["cand_mode"])
         print(f'Embed Candidates = {time.time() -  t:.2f}')
 
         doc_sim = []

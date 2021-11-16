@@ -120,18 +120,30 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
 
     return
         
-#set_gpu_allocator("pytorch")
-#require_gpu(0)
-#spacy.require_gpu()
+#"DUC"      : {"total" : 308,  "test" : 308 },
+#"Inspec"   : {"total" : 2000, "test" : 500 , "dev" : 500, "train" : 1000},
+#"NUS"      : {"total" : 211,  "test" : 211},
+#"PubMed"   : {"total" : 1320, "test" : 1320}, 
+#"PT-KP"    : {"total" : 110,  "test" : 10, "train" : 100},
+#"ES-CACIC" : {"total" : 888,  "test" : 888},
+#"ES-WICC"  : {"total" : 1640, "test" : 1640},
+#"FR-WIKI"  : {"total" : 100,  "test" : 100},
+#"DE-TeKET" : {"total" : 10,   "test" : 10} }
 
 #dataset_obj = DataSet(["PT-KP","ES-CACIC", "ES-WICC", "FR-WIKI", "DE-TeKET"])
 #options = itertools.product(["AvgPool", "WeightAvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
 #options = itertools.product(["AvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
 #options = itertools.product(["AvgPool"], ["MaskAll"])
-options = itertools.product([""], ["MaskAll"])
 
 #"all-mpnet-base-v2", "paraphrase-multilingual-mpnet-base-v2"
 embeds_model = "longformer-paraphrase-multilingual-mpnet-base-v2"
 
-#run_single_model(["FR-WIKI"], embeds_model, choose_tagger("FR-WIKI"), MaskRank, False, False, options, True)
-run_fusion_model(["PT-KP"], embeds_model, choose_tagger("PT-KP"), [EmbedRank,MaskRank], False, False, options, False)
+run_fusion_models =["NUS", "DE-TeKET"]
+#run_single_models = ["ES-CACIC", "ES-WICC" ,"FR-WIKI" ,"DE-TeKET"]
+for model in run_fusion_models:
+    options = itertools.product([""], [""])
+    run_fusion_model([model], embeds_model, choose_tagger(model), [EmbedRank, MaskRank], False, False, options, True)
+
+#options = itertools.product([""], [""])
+#run_single_model(["ES-CACIC"], embeds_model, choose_tagger("ES-CACIC"), EmbedRank, False, False, options, True)
+#run_fusion_model(["DUC"], embeds_model, choose_tagger("DUC"), [EmbedRank, MaskRank], False, False, options, False)
