@@ -1,3 +1,5 @@
+import time
+
 from typing import List, Tuple, Set
 from nltk.stem import PorterStemmer
 
@@ -40,8 +42,14 @@ class GraphRank(BaseKPModel):
         """
 
         doc = Document(doc, self.counter)
+
+        t = time.time()
         doc.pos_tag(self.tagger, False if "pos_tag_memory" not in kwargs else kwargs["pos_tag_memory"], self.counter)
+        print(f'Pos_Tag Doc = {time.time() -  t:.2f}')
+
+        t = time.time()
         doc.extract_candidates(min_len, self.grammar, lemmer)
+        print(f'Extract Candidates = {time.time() -  t:.2f}')
 
         top_n, candidate_set = doc.top_n_candidates(self.model, top_n, min_len, stemmer, **kwargs)
 

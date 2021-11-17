@@ -27,12 +27,9 @@ class Document:
         
         Attributes:
             self.raw_text -> Raw text representation of the document
-            self.doc_sents -> Document in list form divided by sentences
-            self.punctuation_regex -> regex that covers most punctuation and notation marks
+            self.id -> Document id in corpus
 
-            self.tagged_text -> The entire document divided by sentences with POS tags in each word
-            self.candidate_set -> Set of candidates in list form, according to the supplied grammar
-            self.candidate_set_embed -> Set of candidates in list form, according to the supplied grammar, in embedding form
+            self.clustering_methods -> Dictionary with various clustering methods
         """
 
         self.raw_text = raw_text
@@ -54,10 +51,12 @@ class Document:
 
                 for l_dest in unvisited_clusters:
                     for cand_dest in doc_graph[l_dest]:
-                        distance_l = [ 1 /(max(1, abs(pi - pj))) for pi in doc_graph[l_og][cand_og]["pos"] for pj in doc_graph[l_dest][cand_dest]["pos"]]
-                        distance = reduce(lambda x,y: x+y, distance_l)
-                        doc_graph[l_og][cand_og]["edges"][cand_dest] = distance
-                        doc_graph[l_dest][cand_dest]["edges"][cand_og] = distance  
+                        distance_l = [ 1 /(max(1, abs(pi - pj))) for pi in doc_graph[l_og][cand_og]["pos"] \
+                        for pj in doc_graph[l_dest][cand_dest]["pos"]]
+
+                        weight = reduce(lambda x,y: x+y, distance_l)
+                        doc_graph[l_og][cand_og]["edges"][cand_dest] = weight
+                        doc_graph[l_dest][cand_dest]["edges"][cand_og] = weight 
         return doc_graph
 
     def rebalance_graph_edges(self, doc_graph : Dict, a : float = 0.5) -> Dict:
@@ -104,23 +103,7 @@ class Document:
 
         doc_graph = self.build_doc_graph_edges(doc_graph)
 
-        #TODO: Change alpha value
-        doc_graph = self.rebalance_graph_edges(doc_graph, alpha) 
-
-        return 
-
-    def embed_candidates(self, model, stemmer : Callable = None, cand_mode: str = "MaskAll"):
-        """
-        Method that embeds the current candidate set, having several modes according to usage. 
-            cand_mode
-            | MaskFirst only masks the first occurence of a candidate;
-            | MaskAll masks all occurences of said candidate
-
-            The default value is MaskAll.
-        """
-        self.candidate_set_embed = []
-
-        pass
+        return self.rebalance_graph_edges(doc_graph, alpha) 
                 
     def extract_candidates(self, min_len : int = 5, grammar : str = "", lemmer : Callable = None):
         """
@@ -154,34 +137,41 @@ class Document:
             if not detected:
                 self.candidate_dic[candidate].append(n_words-1)
         
+    def rank_candidates(self, doc_graph : Dict, l_v : float = 0.8) -> List[Tuple]:
+        cos_sim_total = reduce(lambda x, y: x + y, [doc_graph[l][c]["doc_sim"] for l in doc_graph for c in doc_graph[l]])
+        prior_s = { c : (1-l_v)*(doc_graph[l][c]["doc_sim"] / cos_sim_total) for l in doc_graph for c in doc_graph[l]}
+
+        succ_s = {}
+        for l in doc_graph:
+            for c in doc_graph[l]:
+                edges = doc_graph[l][c]["edges"]
+                succ_s[c] = reduce(lambda x,y: x + y, [edges[e] for e in edges]) if edges != {} else 1
+        
+        res_scores = {}
+        for l in doc_graph:
+            for c in doc_graph[l]:
+                edges = doc_graph[l][c]["edges"]
+                post_score = reduce(lambda x,y: x + y, [ (edges[e]*prior_s[c] / succ_s[c]) for e in edges]) \
+                if edges != {} else 0
+                
+                res_scores[c] = prior_s[c] + l_v * post_score
+
+        return res_scores
 
     def top_n_candidates(self, model, top_n: int = 5, min_len : int = 5, stemmer : Callable = None, **kwargs) -> List[Tuple]:
 
         t = time.time()
         clustering_alg = "OPTICS" if ("clustering" not in kwargs or kwargs["clustering"] == "") else kwargs["clustering"]
         alpha_v = 0.5 if "alpha" not in kwargs else kwargs["alpha"]
-        self.doc_graph = self.build_doc_graph(model, stemmer, clustering_alg, alpha_v)
+        doc_graph = self.build_doc_graph(model, stemmer, clustering_alg, alpha_v)
         print(f'Build Doc Multipartite Graph = {time.time() -  t:.2f}')
 
         t = time.time()
-        self.embed_candidates(model, stemmer, "MaskAll" if ("cand_mode" not in kwargs or kwargs["cand_mode"] == "") else kwargs["cand_mode"])
-        print(f'Embed Candidates = {time.time() -  t:.2f}')
-
-        doc_sim = []
-        if "cand_mode" not in kwargs or kwargs["cand_mode"] != "MaskHighest":
-            doc_sim = np.absolute(cosine_similarity(self.candidate_set_embed, self.doc_embed.reshape(1, -1)))
-        
-        elif kwargs["cand_mode"] == "MaskHighest":
-            doc_embed = self.doc_embed.reshape(1, -1)
-            for mask_cand_occur in self.candidate_set_embed:
-                if mask_cand_occur != []:
-                    doc_sim.append([np.ndarray.min(np.absolute(cosine_similarity(mask_cand_occur, doc_embed)))])
-                else:
-                    doc_sim.append([1.0])
-
-        candidate_score = sorted([(self.candidate_set[i], 1.0 - doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
+        lambda_v = 0.8 if "lambda" not in kwargs else kwargs["lambda"]
+        cand_scores = sorted(self.rank_candidates(doc_graph, lambda_v), reverse= True, key= lambda x: x[1])
+        print(f'Ranking Candidates = {time.time() -  t:.2f}')
 
         if top_n == -1:
-            return candidate_score, [candidate[0] for candidate in candidate_score]
+            return cand_scores, [candidate[0] for candidate in cand_scores]
 
-        return candidate_score[:top_n], [candidate[0] for candidate in candidate_score]
+        return cand_scores[:top_n], [candidate[0] for candidate in cand_scores]
