@@ -1,9 +1,10 @@
 import time
 import re
+import math
 import numpy as np
 import simplemma
 
-from math import floor
+from functools import reduce
 from nltk import RegexpParser
 
 from sklearn.metrics.pairwise import cosine_similarity
@@ -45,13 +46,42 @@ class Document:
         self.tagged_text, self.doc_sents, self.doc_sents_words = tagger.pos_tag_text_sents_words(self.raw_text, memory, id)
         self.doc_sents = [sent.text for sent in self.doc_sents if sent.text.strip()]
 
-    def build_doc_graph(self, model, stemmer : Callable = None, clustering_method : str = "OPTICS") -> Dict:
+    def build_doc_graph_edges(self, doc_graph : Dict) -> Dict:
+        unvisited_clusters = list(doc_graph.keys())
+        for l_og in doc_graph:
+            del unvisited_clusters[0]
+            for cand_og in doc_graph[l_og]:
+
+                for l_dest in unvisited_clusters:
+                    for cand_dest in doc_graph[l_dest]:
+                        distance_l = [ 1 /(max(1, abs(pi - pj))) for pi in doc_graph[l_og][cand_og]["pos"] for pj in doc_graph[l_dest][cand_dest]["pos"]]
+                        distance = reduce(lambda x,y: x+y, distance_l)
+                        doc_graph[l_og][cand_og]["edges"][cand_dest] = distance
+                        doc_graph[l_dest][cand_dest]["edges"][cand_og] = distance  
+        return doc_graph
+
+    def rebalance_graph_edges(self, doc_graph : Dict, a : float = 0.5) -> Dict:
+        for l_og in doc_graph:
+            if len(doc_graph[l_og]) != 1:
+                f_cand = sorted(doc_graph[l_og], key= lambda x: doc_graph[l_og][x]["pos"][0])[0]
+                pi = doc_graph[l_og][f_cand]["pos"][0]
+                other_cand_edges = [doc_graph[l_og][cand]["edges"] for cand in doc_graph[l_og] if cand != f_cand]
+
+                for l_dest in doc_graph:
+                    if l_dest != l_og:
+                        for cand in doc_graph[l_dest]:
+                            doc_graph[l_dest][cand]["edges"][f_cand] += a * (math.e ** (1 / max(1,pi))) \
+                            * reduce(lambda x,y: x + y, [e[cand] for e in other_cand_edges])
+
+        return doc_graph
+
+    def build_doc_graph(self, model, stemmer : Callable = None, clustering_method : str = "OPTICS", alpha : float = 0.5) -> Dict:
         """
         Method that builds a graph representation of the document at hand.
         """
 
         self.doc_embed = model.embed(stemmer.stem(self.raw_text)) if stemmer else model.embed(self.raw_text)
-        candidates = self.candidate_dic.keys()
+        candidates = [candidate for candidate in self.candidate_dic.keys()]
         candidate_embed_list = [model.embed(stemmer.stem(candidate)) if stemmer else model.embed(candidate) for candidate in self.candidate_dic]
 
         clustering = self.clustering_methods[clustering_method](min_samples=2, metric= 'cosine').fit(candidate_embed_list)
@@ -66,14 +96,18 @@ class Document:
 
             candidate = candidates[i]
             candidate_graph = {"pos" : self.candidate_dic[candidate], "embed" : candidate_embed_list[i], 
-                               "doc_sim" : cosine_similarity(candidate_embed_list[i], self.doc_embed), "edges" : {}}
+                               "doc_sim" : float(np.absolute(cosine_similarity([candidate_embed_list[i]], self.doc_embed.reshape(1, -1)))[0][0]), "edges" : {}}
             
             if label not in doc_graph:
                 doc_graph[label] = {}
-            doc_graph[candidate] = candidate_graph
+            doc_graph[label][candidate] = candidate_graph                                             
 
-        print(doc_graph)
-        return doc_graph
+        doc_graph = self.build_doc_graph_edges(doc_graph)
+
+        #TODO: Change alpha value
+        doc_graph = self.rebalance_graph_edges(doc_graph, alpha) 
+
+        return 
 
     def embed_candidates(self, model, stemmer : Callable = None, cand_mode: str = "MaskAll"):
         """
@@ -113,7 +147,7 @@ class Document:
         for candidate in candidate_set:
             detected = False
             for match in re.finditer(re.escape(candidate), self.raw_text):
-                self.candidate_dic[candidate].append(floor((match.span()[0] + (match.span()[1]-match.span()[0])/2) / avg_len_word))
+                self.candidate_dic[candidate].append(math.floor((match.span()[0] + (match.span()[1]-match.span()[0])/2) / avg_len_word))
                 detected = True
 
             #TODO: Removed this valve later
@@ -124,7 +158,9 @@ class Document:
     def top_n_candidates(self, model, top_n: int = 5, min_len : int = 5, stemmer : Callable = None, **kwargs) -> List[Tuple]:
 
         t = time.time()
-        self.doc_graph = self.build_doc_graph(model, stemmer, "OPTICS" if ("clustering" not in kwargs or kwargs["clustering"] == "") else kwargs["clustering"])
+        clustering_alg = "OPTICS" if ("clustering" not in kwargs or kwargs["clustering"] == "") else kwargs["clustering"]
+        alpha_v = 0.5 if "alpha" not in kwargs else kwargs["alpha"]
+        self.doc_graph = self.build_doc_graph(model, stemmer, clustering_alg, alpha_v)
         print(f'Build Doc Multipartite Graph = {time.time() -  t:.2f}')
 
         t = time.time()

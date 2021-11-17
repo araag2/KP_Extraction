@@ -110,7 +110,7 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
 
                 print(embed_memory_dir)
 
-                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, False, False,\
+                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:20], dataset, 15, 5, False, False,\
                 doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir)
         
             else: 
@@ -139,7 +139,7 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
 #"all-mpnet-base-v2", "longformer-paraphrase-multilingual-mpnet-base-v2"
 embeds_model = "paraphrase-multilingual-mpnet-base-v2"
 
-# run_fusion_models =["NUS", "DE-TeKET"]
+#run_fusion_models =["NUS", "ES-CACIC", "ES-WICC", "DE-TeKET"]
 #run_single_models = ["ES-CACIC", "ES-WICC" ,"FR-WIKI" ,"DE-TeKET"]
 #for model in run_fusion_models:
 #    options = itertools.product([""], [""])
@@ -147,4 +147,5 @@ embeds_model = "paraphrase-multilingual-mpnet-base-v2"
 
 options = itertools.product([""], [""])
 run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), GraphRank, False, False, options, True)
+#run_single_model(["ES-WICC"], embeds_model, choose_tagger("ES-WICC"), MaskRank, False, False, options, True)
 #run_fusion_model(["DUC"], embeds_model, choose_tagger("DUC"), [EmbedRank, MaskRank], False, False, options, False)
