@@ -24,10 +24,9 @@ dataset_expected_sizes = { "DUC"      : {"total" : 308,  "test" : 308 },
                            "PT-KP"    : {"total" : 110,  "test" : 10, "train" : 100},
                            "ES-CACIC" : {"total" : 888,  "test" : 888},
                            "ES-WICC"  : {"total" : 1640, "test" : 1640},
-                           "FR-WIKI"  : {"total" : 100,  "test" : 100},
-                           "DE-TeKET" : {"total" : 10,   "test" : 10} }
+                           "FR-WIKI"  : {"total" : 100,  "test" : 100}}
 
-@pytest.mark.parametrize("dataset", [ ["DUC", "Inspec", "NUS", "PubMed", "PT-KP", "ES-CACIC", "ES-WICC", "FR-WIKI", "DE-TeKET"] ])
+@pytest.mark.parametrize("dataset", [ ["DUC", "Inspec", "NUS", "PubMed", "PT-KP", "ES-CACIC", "ES-WICC", "FR-WIKI"] ])
 def test_dataset_simple(dataset):
     """ Test invoking DataSet extraction with dataset parameters """
 
