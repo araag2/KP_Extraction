@@ -6,6 +6,7 @@ import torch
 
 from typing import Callable
 from transformers import LongformerSelfAttention, XLMRobertaTokenizer, XLMRobertaModel, XLMRobertaConfig
+from transformers import logging
 from keybert.backend._utils import select_backend
 
 def create_long_model(embedding_model, save_model_to, attention_window, max_pos):
@@ -69,11 +70,12 @@ def load_longformer(embedding_model : str = "") -> Callable :
 
     model_path = f'{longformer_path}{embedding_model[11:]}'
     if os.path.exists(model_path) and os.listdir(model_path):
+        logging.set_verbosity_error()
         callable_model = select_backend(embedding_model[11:])
-        callable_model.embedding_model._modules['0']._modules['auto_model'] = XLMRobertaModel.from_pretrained(model_path)
-        callable_model.embedding_model.tokenizer = XLMRobertaTokenizer.from_pretrained(model_path)
-        callable_model.embedding_model._modules['0']._modules['auto_model'].config = XLMRobertaConfig.from_pretrained(model_path)
-        return  callable_model
+        callable_model.embedding_model._modules['0']._modules['auto_model'] = XLMRobertaModel.from_pretrained(model_path, output_loading_info = False)
+        callable_model.embedding_model.tokenizer = XLMRobertaTokenizer.from_pretrained(model_path, output_loading_info = False)
+        callable_model.embedding_model._modules['0']._modules['auto_model'].config = XLMRobertaConfig.from_pretrained(model_path, output_loading_info = False)
+        return callable_model
 
     attention_window = 512
     max_pos = 4096
