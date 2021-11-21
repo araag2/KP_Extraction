@@ -86,11 +86,12 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
                     embeds_model : str = "paraphrase-multilingual-mpnet-base-v2", 
                     pos_tagger_model : str = choose_tagger("DUC"), models : List[Callable] = [EmbedRank, MaskRank],
                     save_pos_tags : bool = False, save_embeds : bool = False, 
-                    options : List[List[str]] = [[""]], use_memory : bool = False) -> None:
+                    options : List[List[str]] = [[""]], weights : List[float] = [0.5, 0.5], 
+                    use_memory : bool = False) -> None:
 
     dataset_obj = DataSet(datasets)
     model_list = [model(f'{embeds_model}', f'{pos_tagger_model}') for model in models]
-    fusion_model = FusionModel(model_list)
+    fusion_model = FusionModel(model_list, weights)
 
     if save_pos_tags:
         for model in models:
@@ -110,7 +111,7 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
 
                 print(embed_memory_dir)
 
-                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:50], dataset, 15, 5, False, False,\
+                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, False, False,\
                 doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir)
         
             else: 
@@ -138,12 +139,12 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
 #"all-mpnet-base-v2", "longformer-paraphrase-multilingual-mpnet-base-v2"
 embeds_model = "longformer-paraphrase-multilingual-mpnet-base-v2"
 
-run_models =["ES-WICC"]
-for model in run_models:
-    options = itertools.product([""], [""])
-    run_fusion_model([model], embeds_model, choose_tagger(model), [EmbedRank, MaskRank], False, False, options, True)
+#run_models =["DUC"]
+#for model in run_models:
+#    options = itertools.product([""], [""])
+#    run_fusion_model([model], embeds_model, choose_tagger(model), [EmbedRank, MaskRank], False, False, options, [0.75, 0.25], True)
 
 options = itertools.product([""], [""])
-#run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), GraphRank, False, False, options, True)
+run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, False, False, options, True)
 #run_single_model(["ES-WICC"], embeds_model, choose_tagger("ES-WICC"), MaskRank, False, False, options, True)
 #run_fusion_model(["DUC"], embeds_model, choose_tagger("DUC"), [EmbedRank, MaskRank], False, False, options, False)

@@ -9,6 +9,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from typing import List, Tuple, Set, Callable
 
 from keybert.mmr import mmr
+from models.pre_processing.post_processing_utils import z_score_normalization
+
 from utils.IO import read_from_file
 
 class Document:
@@ -146,9 +148,13 @@ class Document:
 
         else:
             for candidate in self.candidate_set:
-                split_candidate = [stemmer.stem(candidate) for candidate in candidate.split(" ")] if stemmer else candidate.split(" ")
-                embed = model.embed(split_candidate)
-                self.candidate_set_embed.append(np.mean(embed, axis=0))
+                if cand_mode == "AvgContext":
+                    embed = model.embed([stemmer.stem(word) for word in candidate.split(" ")] if stemmer else candidate.split(" "))
+                    self.candidate_set_embed.append(np.mean(embed, axis=0))
+                else:
+                    self.candidate_set_embed.append(model.embed(stemmer.stem(candidate) if stemmer else candidate))
+
+            #self.candidate_set_embed = z_score_normalization(self.candidate_set_embed, self.raw_text, model)
 
     def extract_candidates(self, min_len : int = 5, grammar : str = "", lemmer : Callable = None):
         """
@@ -186,7 +192,7 @@ class Document:
         self.doc_embed = self.embed_doc(model, stemmer, "" if "doc_mode" not in kwargs else kwargs["doc_mode"])
         print(f'Embed Doc = {time.time() -  t:.2f}')
 
-        if cand_mode != "":
+        if cand_mode != "" and cand_mode != "AvgContext":
             self.embed_sents_words(model, stemmer, False if "embed_memory" not in kwargs else kwargs["embed_memory"])
 
         t = time.time()

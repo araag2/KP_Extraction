@@ -137,7 +137,7 @@ class Document:
             if not detected:
                 self.candidate_dic[candidate].append(n_words-1)
         
-    def rank_candidates(self, doc_graph : Dict, l_v : float = 0.8) -> List[Tuple]:
+    def rank_candidates(self, doc_graph : Dict, l_v : float = 0.2) -> List[Tuple]:
         cos_sim_total = reduce(lambda x, y: x + y, [doc_graph[l][c]["doc_sim"] for l in doc_graph for c in doc_graph[l]])
         prior_s = { c : (1-l_v)*(doc_graph[l][c]["doc_sim"] / cos_sim_total) for l in doc_graph for c in doc_graph[l]}
 
@@ -167,7 +167,7 @@ class Document:
         print(f'Build Doc Multipartite Graph = {time.time() -  t:.2f}')
 
         t = time.time()
-        lambda_v = 0.8 if "lambda" not in kwargs else kwargs["lambda"]
+        lambda_v = 0.2 if "lambda" not in kwargs else kwargs["lambda"]
         cand_scores = sorted(self.rank_candidates(doc_graph, lambda_v), reverse= True, key= lambda x: x[1])
         print(f'Ranking Candidates = {time.time() -  t:.2f}')
 

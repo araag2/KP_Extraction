@@ -63,9 +63,8 @@ class Document:
         if cand_mode == "MaskFirst" or cand_mode == "MaskAll":
             occurences = 1 if cand_mode == "MaskFirst" else 0
 
-            for candidate in self.candidate_set:
-                    embed = model.embed(re.sub(re.escape(candidate), "[MASK]", self.raw_text, occurences))
-                    self.candidate_set_embed.append(embed)
+            escaped_docs = [re.sub(re.escape(candidate), "[MASK]", self.raw_text, occurences) for candidate in self.candidate_set]
+            self.candidate_set_embed = model.embed(escaped_docs)
 
         elif cand_mode == "MaskHighest":
             for candidate in self.candidate_set:
