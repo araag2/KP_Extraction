@@ -62,99 +62,27 @@ class Document:
 
     def embed_doc(self, model, stemmer : Callable = None, doc_mode: str = ""):
         """
-        Method that embeds the document, having several modes according to usage. 
-            AvgPool embed each sentence seperately and takes the Avg of all embeddings as the final document result.
-            Segmented embeds the document in segments of up to 512 characters, pooling the Avg for doc representation.
+        Method that embeds the document, having several modes according to usage.
             The default value just embeds the document normally.
         """
+        return model.embed(stemmer.stem(self.raw_text)) if stemmer else model.embed(self.raw_text)
 
-        if doc_mode == "AvgPool" or doc_mode == "WeightAvgPool":
-            weight_factors = {"AvgPool" : None , 
-                              "WeightAvgPool" : (lambda i: 1 / (i + 1))}
-
-            weight_f = weight_factors[doc_mode]
-            doc_sents_embed = []
-
-            weight_vec = None if weight_f == None else []
-
-            for i in range(len(self.doc_sents)):
-                doc_sents_embed.append(model.embed(stemmer.stem(self.doc_sents[i])) if stemmer else model.embed(self.doc_sents[i]))
-
-                if weight_vec != None:
-                    weight_vec.append(weight_f(i))
-
-            return np.average(doc_sents_embed, axis=0, weights = weight_vec)
-
-        elif doc_mode == "Segmented":
-            segmented_doc = [self.raw_text[i:i+512] for i in range(0, len(self.raw_text), 512)]
-            segmented_doc_embeds = []
-
-            for sentence in segmented_doc:
-                 segmented_doc_embeds.append(model.embed(stemmer.stem(sentence)) if stemmer else model.embed(sentence))
-
-            return np.mean(segmented_doc_embeds, axis=0)
-
-        else:
-            return model.embed(stemmer.stem(self.raw_text)) if stemmer else model.embed(self.raw_text)
-
-    def embed_candidates(self, model, stemmer : Callable = None, cand_mode: str = ""):
+    def embed_candidates(self, model, stemmer : Callable = None, cand_mode: str = "", post_processing : List[str] = []):
         """
         Method that embeds the current candidate set, having several modes according to usage. 
-            AvgPool embed each sentence seperately and takes the Avg of all embeddings of sentences where the candidate occurs.
             The default value just embeds candidates directly.
         """
         self.candidate_set_embed = []
 
-        if cand_mode == "AvgPool" or cand_mode == "WeightAvgPool" or cand_mode == "NormAvgPool":
-            weight_factors = {"AvgPool" : (None, None), 
-                              "WeightAvgPool" : (lambda i: 1 / (i + 50), None),
-                              "NormAvgPool" : (None, lambda embed: np.linalg.norm(embed)) }
-            weight_f = weight_factors[cand_mode]
+        for candidate in self.candidate_set:
+            if cand_mode == "AvgContext":
+                embed = model.embed([stemmer.stem(word) for word in candidate.split(" ")] if stemmer else candidate.split(" "))
+                self.candidate_set_embed.append(np.mean(embed, axis=0))
+            else:
+                self.candidate_set_embed.append(model.embed(stemmer.stem(candidate) if stemmer else candidate))
 
-            for candidate in self.candidate_set:
-
-                split_candidate = [stemmer.stem(candidate) for candidate in candidate.split(" ")] if stemmer else candidate.split(" ")
-                word_range = len(split_candidate)
-                candidate_embed = model.embed(split_candidate)
-                
-                embedding_list = [np.mean(candidate_embed, axis=0)] if weight_f[1] == None else \
-                [np.average(candidate_embed, axis=0, weights = [weight_f[1](word) for word in candidate_embed])]
-
-                weight_phrase_vec = None if weight_f[0] == None else [weight_f[0](0)]
-
-                for sentence, text_candidate in self.candidate_sents[candidate]:
-                    sentence_embeds = []
-
-                    for i, x in enumerate(self.doc_sents_words[sentence]):
-                        if x == text_candidate[0] and text_candidate == self.doc_sents_words[sentence][i : i + word_range]:
-                            for j in range(word_range):
-                                sentence_embeds.append(self.doc_sents_words_embed[sentence][i+j])
-
-                    if sentence_embeds == []:
-                        print(f'Error in candidate detection \n  candidate = {text_candidate}\n  split sentence = {self.doc_sents_words[sentence]} \n')
-                        break
-                    
-                    if weight_phrase_vec != None:
-                        weight_phrase_vec.append(weight_f[0](sentence + 1))
-
-                    sentence_embeds = np.mean(sentence_embeds, axis=0) if weight_f[1] == None else \
-                    np.average(sentence_embeds, axis=0, weights = [weight_f[1](word) for word in sentence_embeds])
-                    embedding_list.append(sentence_embeds)
-
-                if embedding_list != []:
-                    self.candidate_set_embed.append(np.average(embedding_list, axis=0, weights=weight_phrase_vec))
-                else:
-                    self.candidate_set_embed.append(np.zeros(len(self.candidate_set_embed[-1]), len(self.candidate_set_embed[-1][0])))
-
-        else:
-            for candidate in self.candidate_set:
-                if cand_mode == "AvgContext":
-                    embed = model.embed([stemmer.stem(word) for word in candidate.split(" ")] if stemmer else candidate.split(" "))
-                    self.candidate_set_embed.append(np.mean(embed, axis=0))
-                else:
-                    self.candidate_set_embed.append(model.embed(stemmer.stem(candidate) if stemmer else candidate))
-
-            #self.candidate_set_embed = z_score_normalization(self.candidate_set_embed, self.raw_text, model)
+        if "z_score" in post_processing:
+            self.candidate_set_embed = z_score_normalization(self.candidate_set_embed, self.raw_text, model)
 
     def extract_candidates(self, min_len : int = 5, grammar : str = "", lemmer : Callable = None):
         """
@@ -186,17 +114,19 @@ class Document:
 
     def top_n_candidates(self, model, top_n: int = 5, min_len : int = 5, stemmer : Callable = None, **kwargs) -> List[Tuple]:
        
+        doc_mode = "" if "doc_mode" not in kwargs else kwargs["doc_mode"]
         cand_mode = "" if "cand_mode" not in kwargs else kwargs["cand_mode"]
+        post_processing = [""] if "post_processing" not in kwargs else kwargs["post_processing"]
 
         t = time.time()
-        self.doc_embed = self.embed_doc(model, stemmer, "" if "doc_mode" not in kwargs else kwargs["doc_mode"])
+        self.doc_embed = self.embed_doc(model, stemmer, doc_mode)
         print(f'Embed Doc = {time.time() -  t:.2f}')
 
         if cand_mode != "" and cand_mode != "AvgContext":
             self.embed_sents_words(model, stemmer, False if "embed_memory" not in kwargs else kwargs["embed_memory"])
 
         t = time.time()
-        self.embed_candidates(model, stemmer, cand_mode)
+        self.embed_candidates(model, stemmer, cand_mode, post_processing)
         print(f'Embed Candidates = {time.time() -  t:.2f}')
 
         doc_sim = []
