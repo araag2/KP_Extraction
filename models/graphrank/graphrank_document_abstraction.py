@@ -141,6 +141,7 @@ class Document:
         cos_sim_total = reduce(lambda x, y: x + y, [doc_graph[l][c]["doc_sim"] for l in doc_graph for c in doc_graph[l]])
         prior_s = { c : (1-l_v)*(doc_graph[l][c]["doc_sim"] / cos_sim_total) for l in doc_graph for c in doc_graph[l]}
 
+        #TODO: Check this
         succ_s = {}
         for l in doc_graph:
             for c in doc_graph[l]:
