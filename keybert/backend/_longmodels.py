@@ -9,8 +9,8 @@ from transformers import LongformerSelfAttention, XLMRobertaTokenizer, XLMRobert
 from transformers import logging
 from keybert.backend._utils import select_backend
 
-def create_long_model(embedding_model, save_model_to, attention_window, max_pos):
-    callable_model = select_backend(embedding_model[11:])
+def create_long_model(model : str, save_model_to : str, attention_window : int, max_pos : int ) -> Callable :
+    callable_model = select_backend(model)
 
     model = callable_model.embedding_model._modules['0']._modules['auto_model']
     tokenizer = callable_model.embedding_model.tokenizer
@@ -60,18 +60,11 @@ def create_long_model(embedding_model, save_model_to, attention_window, max_pos)
     tokenizer.save_pretrained(save_model_to)
     return callable_model
 
-
-
-def load_longformer(embedding_model : str = "") -> Callable :
-    longformer_path = "C:\\Users\\artur\\Desktop\\stuff\\IST\\Thesis\\Code\\KP_Extraction\\keybert\\backend\\longformers\\"
-
-    if not os.path.exists(longformer_path):
-        os.makedirs(longformer_path)
-
-    model_path = f'{longformer_path}{embedding_model[11:]}'
+def load_longformer(model_path : str = "", model : str = "") -> Callable :
     if os.path.exists(model_path) and os.listdir(model_path):
         logging.set_verbosity_error()
-        callable_model = select_backend(embedding_model[11:])
+        callable_model = select_backend(model)
+
         callable_model.embedding_model._modules['0']._modules['auto_model'] = XLMRobertaModel.from_pretrained(model_path, output_loading_info = False)
         callable_model.embedding_model.tokenizer = XLMRobertaTokenizer.from_pretrained(model_path, output_loading_info = False)
         callable_model.embedding_model._modules['0']._modules['auto_model'].config = XLMRobertaConfig.from_pretrained(model_path, output_loading_info = False)
@@ -79,4 +72,25 @@ def load_longformer(embedding_model : str = "") -> Callable :
 
     attention_window = 512
     max_pos = 4096
-    return create_long_model(embedding_model, model_path, attention_window, max_pos)
+    return create_long_model(model, model_path, attention_window, max_pos)
+
+def load_bigbird(model_path : str = "", model : str = "") -> Callable :
+    if os.path.exists(model_path) and os.listdir(model_path):
+        pass
+
+    pass
+
+
+def load_longmodel(embedding_model : str = "") -> Callable:
+    supported_models = { "longformer" : load_longformer, "bigbird" : load_bigbird}
+    longmodel_path = f'{os. getcwd()}\\keybert\\backend\\long_models\\'
+
+
+    if not os.path.exists(longmodel_path):
+        os.makedirs(longmodel_path)
+
+    sliced_t = embedding_model[:embedding_model.index('-')]
+    sliced_m = embedding_model[embedding_model.index('-')+1:]
+    model_path = f'{longmodel_path}{embedding_model}'
+
+    return supported_models[sliced_t](model_path, sliced_m)    

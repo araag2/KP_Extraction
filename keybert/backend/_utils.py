@@ -12,10 +12,10 @@ def select_backend(embedding_model) -> BaseEmbedder:
     if isinstance(embedding_model, BaseEmbedder):
         return embedding_model
 
-    # Longformer model
-    elif "longformer" in str(embedding_model):
-        from keybert.backend._longformer import load_longformer
-        return load_longformer(embedding_model)
+    # Longmodels model
+    elif "longformer" in str(embedding_model) or "bigbird" in str(embedding_model):
+        from keybert.backend._longmodels import load_longmodel
+        return load_longmodel(embedding_model)
 
     # Flair word embeddings
     elif "flair" in str(type(embedding_model)):
