@@ -5,11 +5,12 @@ import copy
 import torch
 
 from typing import Callable
+from bigbird.core import attention
 from transformers import LongformerSelfAttention, XLMRobertaTokenizer, XLMRobertaModel, XLMRobertaConfig
 from transformers import logging
 from keybert.backend._utils import select_backend
 
-def create_long_model(model : str, save_model_to : str, attention_window : int, max_pos : int ) -> Callable :
+def create_longformer(model : str, save_model_to : str, attention_window : int, max_pos : int ) -> Callable :
     callable_model = select_backend(model)
 
     model = callable_model.embedding_model._modules['0']._modules['auto_model']
@@ -60,11 +61,67 @@ def create_long_model(model : str, save_model_to : str, attention_window : int, 
     tokenizer.save_pretrained(save_model_to)
     return callable_model
 
-def load_longformer(model_path : str = "", model : str = "") -> Callable :
+def create_bigbird(model : str, save_model_to : str, attention_window : int, max_pos : int ) -> Callable :
+    callable_model = select_backend(model)
+
+    model = callable_model.embedding_model._modules['0']._modules['auto_model']
+    tokenizer = callable_model.embedding_model.tokenizer
+    config = model.config
+
+    # TODO: Check this
+    tokenizer.model_max_length = max_pos
+    tokenizer.init_kwargs['model_max_length'] = max_pos
+    tokenizer._tokenizer.truncation['max_length'] = attention_window
+
+    current_max_pos, embed_size = model.embeddings.position_embeddings.weight.shape
+    max_pos += 2  # NOTE: RoBERTa has positions 0,1 reserved, so embedding size is max position + 2
+    config.max_position_embeddings = max_pos
+
+    assert max_pos > current_max_pos
+    # allocate a larger position embedding matrix
+    new_pos_embed = model.embeddings.position_embeddings.weight.new_empty(max_pos, embed_size)
+    # copy position embeddings over and over to initialize the new position embeddings
+    
+    k = 2
+    step = current_max_pos - 2
+    while k < max_pos - 1:
+        new_pos_embed[k:(k + step)] = model.embeddings.position_embeddings.weight[2:]
+        k += step
+    
+    model.embeddings.position_embeddings.weight.data = new_pos_embed
+    model.embeddings.position_ids.data = torch.tensor([i for i in range(max_pos)]).reshape(1, max_pos)
+
+    config.attention_window = [attention_window] * config.num_hidden_layers
+    for i, layer in enumerate(model.encoder.layer):
+        bigbird_self_attn = bigbird.core.attention.MultiHeadedAttentionLayer()
+        print(bigbird_self_attn)
+        pass
+    
+    if not os.path.exists(save_model_to):
+        os.makedirs(save_model_to)
+    
+    model.save_pretrained(save_model_to)
+    tokenizer.save_pretrained(save_model_to)
+    return callable_model
+
+def load_longmodel(embedding_model : str = "") -> Callable:
+    supported_models = { "longformer" : create_longformer, "bigbird" : create_bigbird}
+    longmodel_path = f'{os. getcwd()}\\keybert\\backend\\long_models\\'
+    sliced_t = embedding_model[:embedding_model.index('-')]
+
+    if sliced_t not in supported_models:
+        raise ValueError("Model is not in supported types")
+
+    if not os.path.exists(longmodel_path):
+        os.makedirs(longmodel_path)
+
+    sliced_m = embedding_model[embedding_model.index('-')+1:]
+    model_path = f'{longmodel_path}{embedding_model}'
+
     if os.path.exists(model_path) and os.listdir(model_path):
         logging.set_verbosity_error()
-        callable_model = select_backend(model)
-
+        callable_model = select_backend(sliced_m)
+        
         callable_model.embedding_model._modules['0']._modules['auto_model'] = XLMRobertaModel.from_pretrained(model_path, output_loading_info = False)
         callable_model.embedding_model.tokenizer = XLMRobertaTokenizer.from_pretrained(model_path, output_loading_info = False)
         callable_model.embedding_model._modules['0']._modules['auto_model'].config = XLMRobertaConfig.from_pretrained(model_path, output_loading_info = False)
@@ -72,25 +129,4 @@ def load_longformer(model_path : str = "", model : str = "") -> Callable :
 
     attention_window = 512
     max_pos = 4096
-    return create_long_model(model, model_path, attention_window, max_pos)
-
-def load_bigbird(model_path : str = "", model : str = "") -> Callable :
-    if os.path.exists(model_path) and os.listdir(model_path):
-        pass
-
-    pass
-
-
-def load_longmodel(embedding_model : str = "") -> Callable:
-    supported_models = { "longformer" : load_longformer, "bigbird" : load_bigbird}
-    longmodel_path = f'{os. getcwd()}\\keybert\\backend\\long_models\\'
-
-
-    if not os.path.exists(longmodel_path):
-        os.makedirs(longmodel_path)
-
-    sliced_t = embedding_model[:embedding_model.index('-')]
-    sliced_m = embedding_model[embedding_model.index('-')+1:]
-    model_path = f'{longmodel_path}{embedding_model}'
-
-    return supported_models[sliced_t](model_path, sliced_m)    
+    return supported_models[sliced_t](sliced_m, model_path, attention_window, max_pos)    

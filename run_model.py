@@ -145,6 +145,6 @@ embeds_model = "longformer-paraphrase-multilingual-mpnet-base-v2"
 #    run_fusion_model([model], embeds_model, choose_tagger(model), [EmbedRank, MaskRank], False, False, options, [0.75, 0.25], True)
 
 options = itertools.product([""], [""])
-run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), MaskRank, False, False, options, True)
+run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, False, False, options, True)
 #run_single_model(["ES-WICC"], embeds_model, choose_tagger("ES-WICC"), MaskRank, False, False, options, True)
 #run_fusion_model(["DUC"], embeds_model, choose_tagger("DUC"), [EmbedRank, MaskRank], False, False, options, False)
