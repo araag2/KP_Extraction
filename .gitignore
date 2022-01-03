@@ -83,7 +83,7 @@ config.py
 results/
 embeds/
 pos_tags/
-longformers/
+long_models/
 
 #dataset prototype
 ResisBank/
