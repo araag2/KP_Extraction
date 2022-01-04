@@ -137,7 +137,7 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
 #options = itertools.product(["AvgPool"], ["MaskAll"])
 
 #"all-mpnet-base-v2", "longformer-paraphrase-multilingual-mpnet-base-v2"
-embeds_model = "longformer-paraphrase-multilingual-mpnet-base-v2"
+embeds_model = "bigbird-paraphrase-multilingual-mpnet-base-v2"
 
 #run_models =["DUC"]
 #for model in run_models:

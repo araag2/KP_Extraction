@@ -6,7 +6,8 @@ import torch
 
 from typing import Callable
 from bigbird.core import attention
-from transformers import LongformerSelfAttention, XLMRobertaTokenizer, XLMRobertaModel, XLMRobertaConfig
+from bigbird.core import encoder
+from transformers import BigBirdModel, LongformerSelfAttention, XLMRobertaTokenizer, XLMRobertaModel, XLMRobertaConfig
 from transformers import logging
 from keybert.backend._utils import select_backend
 
@@ -92,10 +93,13 @@ def create_bigbird(model : str, save_model_to : str, attention_window : int, max
     model.embeddings.position_ids.data = torch.tensor([i for i in range(max_pos)]).reshape(1, max_pos)
 
     config.attention_window = [attention_window] * config.num_hidden_layers
-    for i, layer in enumerate(model.encoder.layer):
-        bigbird_self_attn = bigbird.core.attention.MultiHeadedAttentionLayer()
-        print(bigbird_self_attn)
-        pass
+    roberta_layers = [ layer for _, layer in enumerate(model.encoder.layer)]
+
+    big_bird_model = BigBirdModel.from_pretrained('google/bigbird-roberta-base')
+    big_bird_layers = [ layer for _, layer in enumerate(big_bird_model.encoder.layer)]
+    
+    for layer, big_bird_layer in zip(roberta_layers, big_bird_layers):
+        layer.attention.self = big_bird_layer.attention.self
     
     if not os.path.exists(save_model_to):
         os.makedirs(save_model_to)
@@ -118,8 +122,8 @@ def load_longmodel(embedding_model : str = "") -> Callable:
     sliced_m = embedding_model[embedding_model.index('-')+1:]
     model_path = f'{longmodel_path}{embedding_model}'
 
-    if os.path.exists(model_path) and os.listdir(model_path):
-        logging.set_verbosity_error()
+    logging.set_verbosity_error()
+    if os.path.exists(model_path) and os.listdir(model_path):    
         callable_model = select_backend(sliced_m)
         
         callable_model.embedding_model._modules['0']._modules['auto_model'] = XLMRobertaModel.from_pretrained(model_path, output_loading_info = False)
