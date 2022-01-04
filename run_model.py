@@ -70,7 +70,7 @@ def run_single_model(datasets : List[str] = ["DUC"],
                 pos_tag_memory_dir = f'{POS_TAG_DIR}{dataset}/{pos_tagger_model}/'
                 embed_memory_dir = f'{EMBEDS_DIR}{dataset}/{embeds_model}/'
 
-                res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, False, False,\
+                res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:10], dataset, 15, 5, False, False,\
                 doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir)
         
             else: 

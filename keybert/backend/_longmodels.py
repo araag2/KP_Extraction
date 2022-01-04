@@ -7,7 +7,7 @@ import torch
 from typing import Callable
 from bigbird.core import attention
 from bigbird.core import encoder
-from transformers import BigBirdModel, LongformerSelfAttention, XLMRobertaTokenizer, XLMRobertaModel, XLMRobertaConfig
+from transformers import BigBirdModel, BigBirdConfig, LongformerSelfAttention, XLMRobertaTokenizer, XLMRobertaModel, XLMRobertaConfig
 from transformers import logging
 from keybert.backend._utils import select_backend
 
@@ -72,7 +72,7 @@ def create_bigbird(model : str, save_model_to : str, attention_window : int, max
     # TODO: Check this
     tokenizer.model_max_length = max_pos
     tokenizer.init_kwargs['model_max_length'] = max_pos
-    tokenizer._tokenizer.truncation['max_length'] = attention_window
+    tokenizer._tokenizer.truncation["max_length"] = attention_window
 
     current_max_pos, embed_size = model.embeddings.position_embeddings.weight.shape
     max_pos += 2  # NOTE: RoBERTa has positions 0,1 reserved, so embedding size is max position + 2
@@ -95,12 +95,17 @@ def create_bigbird(model : str, save_model_to : str, attention_window : int, max
     config.attention_window = [attention_window] * config.num_hidden_layers
     roberta_layers = [ layer for _, layer in enumerate(model.encoder.layer)]
 
-    big_bird_model = BigBirdModel.from_pretrained('google/bigbird-roberta-base')
+    big_bird_config = BigBirdConfig()
+    big_bird_config.update(config.to_dict())
+    big_bird_model = BigBirdModel(big_bird_config)
     big_bird_layers = [ layer for _, layer in enumerate(big_bird_model.encoder.layer)]
     
     for layer, big_bird_layer in zip(roberta_layers, big_bird_layers):
+        big_bird_layer.attention.self.query = layer.attention.self.query
+        big_bird_layer.attention.self.key = layer.attention.self.key
+        big_bird_layer.attention.self.value = layer.attention.self.value
         layer.attention.self = big_bird_layer.attention.self
-    
+
     if not os.path.exists(save_model_to):
         os.makedirs(save_model_to)
     
@@ -123,11 +128,14 @@ def load_longmodel(embedding_model : str = "") -> Callable:
     model_path = f'{longmodel_path}{embedding_model}'
 
     logging.set_verbosity_error()
-    if os.path.exists(model_path) and os.listdir(model_path):    
+    if os.path.exists(model_path) and os.listdir(model_path):
+        #print(model_path)    
         callable_model = select_backend(sliced_m)
+        #print(callable_model.embedding_model._modules['0']._modules['auto_model'].encoder)
         
         callable_model.embedding_model._modules['0']._modules['auto_model'] = XLMRobertaModel.from_pretrained(model_path, output_loading_info = False)
         callable_model.embedding_model.tokenizer = XLMRobertaTokenizer.from_pretrained(model_path, output_loading_info = False)
+        callable_model.embedding_model.tokenizer.save_pretrained(model_path)
         callable_model.embedding_model._modules['0']._modules['auto_model'].config = XLMRobertaConfig.from_pretrained(model_path, output_loading_info = False)
         return callable_model
 
