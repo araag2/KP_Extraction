@@ -40,15 +40,37 @@ class FusionModel:
 
         #TODO: Need to allign this if candidate extraction differs between models 
         kp_score = {k: {} for k in range(doc_num)}
+        print(self.models)
         for i in range(doc_num):
-            for j in range(len(self.models)):
-                res_docs[i][j][1] = res_docs[i][j][1] / np.sum(res_docs[i][j][1]) 
+            if isinstance(self.weights, list):
+                for j in range(len(self.models)):
+                    res_docs[i][j][1] = res_docs[i][j][1] / np.sum(res_docs[i][j][1]) 
 
-                for k in range(len(res_docs[i][j][0])):
-                    if res_docs[i][j][0][k] not in kp_score[i]:
-                        kp_score[i][res_docs[i][j][0][k]] = self.weights[j] * res_docs[i][j][1][k]
+                    for k in range(len(res_docs[i][j][0])):
+                        if res_docs[i][j][0][k] not in kp_score[i]:
+                            kp_score[i][res_docs[i][j][0][k]] = self.weights[j] * res_docs[i][j][1][k]
+                        else:
+                            kp_score[i][res_docs[i][j][0][k]] += self.weights[j] * res_docs[i][j][1][k]
+
+            elif self.weights == "harmonic":
+                res_docs[i][0][1] = res_docs[i][0][1] / np.sum(res_docs[i][0][1])
+                res_docs[i][1][1] = res_docs[i][1][1] / np.sum(res_docs[i][1][1])
+
+                first_m_res = {res_docs[i][0][0][k] : res_docs[i][0][1][k] for k in range(len(res_docs[i][0][0]))}
+                second_m_res = {res_docs[i][1][0][k] : res_docs[i][1][1][k] for k in range(len(res_docs[i][1][0]))}
+
+                for kp in first_m_res:
+                    if kp in second_m_res:
+                        kp_score[i][kp] = 2.0 * (first_m_res[kp] * second_m_res[kp] ) / ( first_m_res[kp] + second_m_res[kp])
                     else:
-                        kp_score[i][res_docs[i][j][0][k]] += self.weights[j] * res_docs[i][j][1][k]
+                        kp_score[i][kp] = first_m_res[kp]
+
+                for kp in second_m_res:
+                    if kp not in kp_score:
+                        kp_score[i][kp] = second_m_res[kp]
+
+            else:
+                raise ValueError("self.weight is badly initialized")
 
         kp_score = [sorted([(kp, kp_score[doc][kp]) for kp in kp_score[doc]], reverse=True, key= lambda x: x[1]) for doc in kp_score]
                 

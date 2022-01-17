@@ -140,6 +140,9 @@ def evaluate_kp_extraction(model_results : Dict[str, List] = {}, true_labels: Di
     if save:
         with open(f'{RESULT_DIR}/raw/{stamp} raw.txt', "a") as f:
             f.write(res.rstrip())
+        with open(f'{RESULT_DIR}/struct/{stamp} f1_5.txt', "a") as f2:
+            for ele in results_kp[f'F1_5']:
+                f2.write(f'{ele*100:.3f}\n')
         #write_to_file(f'{RESULT_DIR}/struct/{stamp}', res_dic)
 
     print(res)

@@ -70,7 +70,7 @@ def run_single_model(datasets : List[str] = ["DUC"],
                 pos_tag_memory_dir = f'{POS_TAG_DIR}{dataset}/{pos_tagger_model}/'
                 embed_memory_dir = f'{EMBEDS_DIR}{dataset}/{embeds_model}/'
 
-                res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:10], dataset, 15, 5, False, False,\
+                res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, False, False,\
                 doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir)
         
             else: 
@@ -137,7 +137,7 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
 #options = itertools.product(["AvgPool"], ["MaskAll"])
 
 #"all-mpnet-base-v2", "longformer-paraphrase-multilingual-mpnet-base-v2"
-embeds_model = "bigbird-paraphrase-multilingual-mpnet-base-v2"
+embeds_model = "longformer-paraphrase-multilingual-mpnet-base-v2"
 
 #run_models =["DUC"]
 #for model in run_models:
@@ -145,6 +145,6 @@ embeds_model = "bigbird-paraphrase-multilingual-mpnet-base-v2"
 #    run_fusion_model([model], embeds_model, choose_tagger(model), [EmbedRank, MaskRank], False, False, options, [0.75, 0.25], True)
 
 options = itertools.product([""], [""])
-run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, False, False, options, True)
-#run_single_model(["ES-WICC"], embeds_model, choose_tagger("ES-WICC"), MaskRank, False, False, options, True)
-#run_fusion_model(["DUC"], embeds_model, choose_tagger("DUC"), [EmbedRank, MaskRank], False, False, options, False)
+#run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, False, False, options, True)
+#run_single_model(["Inspec"], embeds_model, choose_tagger("Inspec"), MaskRank, False, False, options, True)
+run_fusion_model(["Inspec"], embeds_model, choose_tagger("Inspec"), [EmbedRank, MaskRank], False, False, options, "harmonic", True)
