@@ -9,7 +9,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from typing import List, Tuple, Set, Callable
 
 from keybert.mmr import mmr
-from models.pre_processing.post_processing_utils import z_score_normalization
+from models.pre_processing.post_processing_utils import z_score_normalization, whitening
 
 from utils.IO import read_from_file
 
@@ -60,12 +60,13 @@ class Document:
         else:
             self.doc_sents_words_embed = read_from_file(f'{memory}/{self.id}')
 
-    def embed_doc(self, model, stemmer : Callable = None, doc_mode: str = ""):
+    def embed_doc(self, model, stemmer : Callable = None, doc_mode: str = "", post_processing : List[str] = []):
         """
         Method that embeds the document, having several modes according to usage.
             The default value just embeds the document normally.
         """
-        return model.embed(stemmer.stem(self.raw_text)) if stemmer else model.embed(self.raw_text)
+        embed = model.embed(stemmer.stem(self.raw_text)) if stemmer else model.embed(self.raw_text) 
+        return embed if "whitening" not in post_processing else whitening(embed)
 
     def embed_candidates(self, model, stemmer : Callable = None, cand_mode: str = "", post_processing : List[str] = []):
         """
@@ -83,6 +84,9 @@ class Document:
 
         if "z_score" in post_processing:
             self.candidate_set_embed = z_score_normalization(self.candidate_set_embed, self.raw_text, model)
+
+        if "whitening" in post_processing:
+            self.candidate_set_embed = whitening(self.candidate_set_embed)
 
     def extract_candidates(self, min_len : int = 5, grammar : str = "", lemmer : Callable = None):
         """
@@ -119,7 +123,7 @@ class Document:
         post_processing = [""] if "post_processing" not in kwargs else kwargs["post_processing"]
 
         t = time.time()
-        self.doc_embed = self.embed_doc(model, stemmer, doc_mode)
+        self.doc_embed = self.embed_doc(model, stemmer, doc_mode, post_processing)
         print(f'Embed Doc = {time.time() -  t:.2f}')
 
         if cand_mode != "" and cand_mode != "AvgContext":
