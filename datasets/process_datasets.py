@@ -23,11 +23,11 @@ class DataSet:
                       * NUS
                       * Inspec
                       * PT-KP
+                      * SemEval
                       * PubMed
                       * ES-CACIC
                       * ES-WICC
                       * FR-WIKI
-                      * DE-TeKET
             unsupervised: Requested supervision criteria
         """
 
@@ -36,11 +36,11 @@ class DataSet:
                                    "NUS"      : "xml", 
                                    "Inspec"   : "xml",
                                    "PT-KP"    : "xml",
+                                   "SemEval"   : "txt",
                                    "PubMed"   : "xml",
                                    "ES-CACIC" : "txt", 
                                    "ES-WICC"  : "txt", 
-                                   "FR-WIKI"  : "txt", 
-                                   "DE-TeKET" : "txt"}
+                                   "FR-WIKI"  : "txt", }
 
         self.data_subset = ["train", "dev", "test"]
 
@@ -121,7 +121,7 @@ class DataSet:
 
                 for file in os.listdir(subset_dir):
                     doc = open(f'{subset_dir}/{file}', 'r', encoding='utf-8').read()
-                    kp = [line.rstrip() for line in open(f'{dataset_dir}/references/{file[:-4]}.txt', 'r', encoding='utf-8').readlines() if line.strip()]
+                    kp = [line.rstrip() for line in open(f'{dataset_dir}/references/{file[:-4]}.key', 'r', encoding='utf-8').readlines() if line.strip()]
                     res.append((doc, kp))
                     print(f'doc number {file[:-4]}')
         return res

@@ -62,12 +62,12 @@ class FusionModel:
                 for kp in first_m_res:
                     if kp in second_m_res:
                         kp_score[i][kp] = 2.0 * (first_m_res[kp] * second_m_res[kp] ) / ( first_m_res[kp] + second_m_res[kp])
-                    else:
-                        kp_score[i][kp] = first_m_res[kp]
+                    #else:
+                    #    kp_score[i][kp] = first_m_res[kp]
 
-                for kp in second_m_res:
-                    if kp not in kp_score:
-                        kp_score[i][kp] = second_m_res[kp]
+                #for kp in second_m_res:
+                #    if kp not in kp_score:
+                #        kp_score[i][kp] = second_m_res[kp]
 
             else:
                 raise ValueError("self.weight is badly initialized")

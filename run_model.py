@@ -125,6 +125,7 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
 #"DUC"      : {"total" : 308,  "test" : 308 },
 #"Inspec"   : {"total" : 2000, "test" : 500 , "dev" : 500, "train" : 1000},
 #"NUS"      : {"total" : 211,  "test" : 211},
+#"SemEval"   : {"total" : 243, "test" : 243}, 
 #"PubMed"   : {"total" : 1320, "test" : 1320}, 
 #"PT-KP"    : {"total" : 110,  "test" : 10, "train" : 100},
 #"ES-CACIC" : {"total" : 888,  "test" : 888},
@@ -145,6 +146,6 @@ embeds_model = "longformer-paraphrase-multilingual-mpnet-base-v2"
 #    run_fusion_model([model], embeds_model, choose_tagger(model), [EmbedRank, MaskRank], False, False, options, [0.75, 0.25], True)
 
 options = itertools.product([""], [""])
-#run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, False, False, options, True)
-#run_single_model(["Inspec"], embeds_model, choose_tagger("Inspec"), MaskRank, False, False, options, True)
-run_fusion_model(["Inspec"], embeds_model, choose_tagger("Inspec"), [EmbedRank, MaskRank], False, False, options, "harmonic", True)
+run_single_model(["SemEval"], embeds_model, choose_tagger("SemEval"), EmbedRank, True, True, options, True)
+#run_single_model(["NUS"], embeds_model, choose_tagger("NUS"), EmbedRank, False, False, options, True)
+#run_fusion_model(["NUS"], embeds_model, choose_tagger("NUS"), [EmbedRank, MaskRank], False, False, options, "harmonic", True)
