@@ -12,18 +12,14 @@ def z_score_normalization(candidate_set_embeded : List[List[float]], raw_documen
     return [((e - mean) / std_dev) for e in candidate_set_embeded]
 
 # Implemented from the whitening BERT library
-def whitening(embeddings : np.ndarray):
-    embeddings = torch.from_numpy(embeddings)
-    if len(embeddings.shape()) == 1:
-        embeddings = embeddings[None, :]
-    
+def whitening(embeddings : torch.tensor) -> np.array:
+   
     mu = torch.mean(embeddings, dim=0, keepdim=True)
     cov = torch.mm((embeddings - mu).t(), embeddings - mu)
     u, s, vt = torch.svd(cov)
     ud = torch.mm(u, torch.diag(1/torch.sqrt(s)))
     embeddings = torch.mm(embeddings - mu, ud)
-
-    if len(embeddings.shape) == 1:
-        embeddings = embeddings[0]
-
-    return embeddings.numpy()
+    
+    print(embeddings)
+    
+    return np.array([embedding.numpy() for embedding in embeddings])

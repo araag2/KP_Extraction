@@ -1,5 +1,6 @@
 import time
 import re
+import torch
 import numpy as np
 import simplemma
 
@@ -65,8 +66,11 @@ class Document:
         Method that embeds the document, having several modes according to usage.
             The default value just embeds the document normally.
         """
-        embed = model.embed(stemmer.stem(self.raw_text)) if stemmer else model.embed(self.raw_text) 
-        return embed if "whitening" not in post_processing else whitening(embed)
+        embed = model.embed(stemmer.stem(self.raw_text)) if stemmer else model.embed(self.raw_text)
+        return embed
+
+        #TODO: Fix Me
+        return embed if "whitening" not in post_processing else whitening(torch.unsqueeze(torch.from_numpy(embed), dim=0))[0]
 
     def embed_candidates(self, model, stemmer : Callable = None, cand_mode: str = "", post_processing : List[str] = []):
         """
@@ -86,7 +90,7 @@ class Document:
             self.candidate_set_embed = z_score_normalization(self.candidate_set_embed, self.raw_text, model)
 
         if "whitening" in post_processing:
-            self.candidate_set_embed = whitening(self.candidate_set_embed)
+            self.candidate_set_embed = whitening(torch.stack([torch.from_numpy(embed) for embed in self.candidate_set_embed]))
 
     def extract_candidates(self, min_len : int = 5, grammar : str = "", lemmer : Callable = None):
         """
