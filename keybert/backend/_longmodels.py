@@ -133,10 +133,10 @@ def load_longmodel(embedding_model : str = "") -> Callable:
         callable_model = select_backend(sliced_m)
         #print(callable_model.embedding_model._modules['0']._modules['auto_model'].encoder)
         
-        callable_model.embedding_model._modules['0']._modules['auto_model'] = XLMRobertaModel.from_pretrained(model_path, output_loading_info = False)
-        callable_model.embedding_model.tokenizer = XLMRobertaTokenizer.from_pretrained(model_path, output_loading_info = False)
+        callable_model.embedding_model._modules['0']._modules['auto_model'] = XLMRobertaModel.from_pretrained(model_path, output_loading_info = False,  output_hidden_states = True)
+        callable_model.embedding_model.tokenizer = XLMRobertaTokenizer.from_pretrained(model_path, output_loading_info = False,  output_hidden_states = True)
         callable_model.embedding_model.tokenizer.save_pretrained(model_path)
-        callable_model.embedding_model._modules['0']._modules['auto_model'].config = XLMRobertaConfig.from_pretrained(model_path, output_loading_info = False)
+        callable_model.embedding_model._modules['0']._modules['auto_model'].config = XLMRobertaConfig.from_pretrained(model_path, output_loading_info = False,  output_hidden_states = True)
         return callable_model
 
     attention_window = 512

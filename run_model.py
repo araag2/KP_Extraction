@@ -53,6 +53,7 @@ def run_single_model(datasets : List[str] = ["DUC"],
                     pos_tagger_model : str = choose_tagger("DUC"), model_class : Callable = EmbedRank,
                     save_pos_tags : bool = False, save_embeds : bool = False, 
                     doc_cand_modes : List[List[str]] = [[""]], use_memory : bool = False,
+                    stemming : bool = False, lemmatize : bool = False, 
                     **kwargs) -> None:
 
     dataset_obj = DataSet(datasets)
@@ -72,11 +73,12 @@ def run_single_model(datasets : List[str] = ["DUC"],
                 pos_tag_memory_dir = f'{POS_TAG_DIR}{dataset}/{pos_tagger_model}/'
                 embed_memory_dir = f'{EMBEDS_DIR}{dataset}/{embeds_model}/'
 
-                res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, False, False,\
+                res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, stemming, lemmatize,\
                 doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir, **kwargs)
         
             else: 
-                res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, False, doc_mode = d_mode, cand_mode = c_mode, **kwargs)
+                res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, stemming, lemmatize, \
+                doc_mode = d_mode, cand_mode = c_mode, **kwargs)
 
 
         evaluate_kp_extraction(extract_res_labels(res, PorterStemmer()), extract_dataset_labels(dataset_obj.dataset_content, PorterStemmer(), None), \
@@ -89,7 +91,7 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
                     pos_tagger_model : str = choose_tagger("DUC"), models : List[Callable] = [EmbedRank, MaskRank],
                     save_pos_tags : bool = False, save_embeds : bool = False, 
                     doc_cand_modes : List[List[str]] = [[""]], weights : List[float] = [0.5, 0.5], 
-                    use_memory : bool = False, **kwargs) -> None:
+                    use_memory : bool = False, stemming : bool = False, lemmatize : bool = False, **kwargs) -> None:
 
     dataset_obj = DataSet(datasets)
     model_list = [model(f'{embeds_model}', f'{pos_tagger_model}') for model in models]
@@ -113,11 +115,11 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
 
                 print(embed_memory_dir)
 
-                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, False, False,\
+                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, stemming, lemmatize,\
                 doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir, **kwargs)
         
             else: 
-                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, False, doc_mode = d_mode, cand_mode = c_mode, **kwargs)
+                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, stemming, doc_mode = d_mode, cand_mode = c_mode, **kwargs)
 
         evaluate_kp_extraction(extract_res_labels(res, PorterStemmer()), extract_dataset_labels(dataset_obj.dataset_content, PorterStemmer(), None), \
         fusion_model.name, True, True)
@@ -148,6 +150,22 @@ embeds_model = "longformer-paraphrase-multilingual-mpnet-base-v2"
 #    run_fusion_model([model], embeds_model, choose_tagger(model), [EmbedRank, MaskRank], False, False, options, [0.75, 0.25], True)
 
 doc_cand_modes = itertools.product([""], [""])
-run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, False, False, doc_cand_modes, True, post_processing = ["whitening"])
-#run_single_model(["NUS"], embeds_model, choose_tagger("NUS"), EmbedRank, False, False, doc_cand_modes, True)
-#run_fusion_model(["NUS"], embeds_model, choose_tagger("NUS"), [EmbedRank, MaskRank], False, False, doc_cand_modes, "harmonic", True)
+pos_tags_f = False
+embeds_f = False
+save_result = True
+stemming = False
+lemmatize = False
+
+#run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, save_result, stemming, lemmatize, post_processing = ["whitening"])
+#run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, save_result, stemming, lemmatize)
+#run_fusion_model(["SemEval"], embeds_model, choose_tagger("ES-CACIC"), [EmbedRank, MaskRank], False, False, doc_cand_modes, "harmonic", True)
+
+
+from keybert.backend._utils import select_backend
+model = select_backend("longformer-paraphrase-multilingual-mpnet-base-v2")
+inputs = model.embedding_model.tokenizer("hi there", return_tensors="pt")
+outputs = model.embedding_model._modules['0']._modules['auto_model'](**inputs)
+print(len(outputs[0]))
+print(len(outputs[1]))
+print(len(outputs[2]))
+print(len(outputs[2][0]))

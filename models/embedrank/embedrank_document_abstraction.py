@@ -66,11 +66,15 @@ class Document:
         Method that embeds the document, having several modes according to usage.
             The default value just embeds the document normally.
         """
-        embed = model.embed(stemmer.stem(self.raw_text)) if stemmer else model.embed(self.raw_text)
-        return embed
+        
+        if "whitening" in post_processing:
+            inputs = model.embedding_model.tokenizer(self.raw_text, return_tensors="pt")
+            hidden_states = model.embedding_model._modules['0']._modules['auto_model'](**inputs)[2]
 
-        #TODO: Fix Me
-        return embed if "whitening" not in post_processing else whitening(torch.unsqueeze(torch.from_numpy(embed), dim=0))[0]
+            # avg_l1_l12 = hidden_states[]
+            # whitening(torch.unsqueeze(torch.from_numpy(embed), dim=0))[0]
+
+        return model.embed(self.raw_text)
 
     def embed_candidates(self, model, stemmer : Callable = None, cand_mode: str = "", post_processing : List[str] = []):
         """

@@ -20,6 +20,4 @@ def whitening(embeddings : torch.tensor) -> np.array:
     ud = torch.mm(u, torch.diag(1/torch.sqrt(s)))
     embeddings = torch.mm(embeddings - mu, ud)
     
-    print(embeddings)
-    
     return np.array([embedding.numpy() for embedding in embeddings])

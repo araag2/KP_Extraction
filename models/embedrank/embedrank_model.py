@@ -43,8 +43,6 @@ class EmbedRank(BaseKPModel):
         doc = Document(doc, self.counter)
         doc.pos_tag(self.tagger, False if "pos_tag_memory" not in kwargs else kwargs["pos_tag_memory"], self.counter)
         doc.extract_candidates(min_len, self.grammar, lemmer)
-
-        print(self.model.embedding_model)
         
         top_n, candidate_set = doc.top_n_candidates(self.model, top_n, min_len, stemmer, **kwargs)
 
