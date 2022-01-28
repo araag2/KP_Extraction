@@ -73,7 +73,7 @@ def run_single_model(datasets : List[str] = ["DUC"],
                 pos_tag_memory_dir = f'{POS_TAG_DIR}{dataset}/{pos_tagger_model}/'
                 embed_memory_dir = f'{EMBEDS_DIR}{dataset}/{embeds_model}/'
 
-                res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][:100], dataset, 15, 5, stemming, lemmatize,\
+                res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 2, stemming, lemmatize,\
                 doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir, **kwargs)
         
             else: 
@@ -151,7 +151,7 @@ save_result = True
 stemming = False
 lemmatize = False
 
-run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, save_result, stemming, lemmatize, post_processing = ["whitening"])
+run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, save_result, stemming, lemmatize)
 #run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, save_result, stemming, lemmatize)
 #run_fusion_model(["SemEval"], embeds_model, choose_tagger("ES-CACIC"), [EmbedRank, MaskRank], False, False, doc_cand_modes, "harmonic", True)
 
