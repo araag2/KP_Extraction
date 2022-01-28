@@ -1,8 +1,10 @@
+from ctypes.wintypes import HINSTANCE
 import re
+from turtle import hideturtle
 import numpy as np
 import torch
 
-from typing import Callable, List
+from typing import Callable, List, Tuple
 
 def z_score_normalization(candidate_set_embeded : List[List[float]], raw_document : str, model : Callable) -> List[List[float]] :
     split_doc_embeded = model.embed(raw_document.split(" "))
@@ -20,4 +22,12 @@ def whitening(embeddings : torch.tensor) -> np.array:
     ud = torch.mm(u, torch.diag(1/torch.sqrt(s)))
     embeddings = torch.mm(embeddings - mu, ud)
     
-    return np.array([embedding.numpy() for embedding in embeddings])
+    return np.array([embedding.detach().numpy() for embedding in embeddings])
+
+def l1_l12_embed(text : str, model: Callable) -> Tuple:
+    inputs = model.embedding_model.tokenizer(text, return_tensors="pt", max_length = 4096)
+    outputs = model.embedding_model._modules['0']._modules['auto_model'](**inputs)
+    result = (outputs.hidden_states[1] + outputs.hidden_states[-1])/2.0
+    # example result[0,0,:]
+
+    return (inputs.input_ids.squeeze().tolist(), result)

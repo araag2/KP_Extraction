@@ -7,7 +7,7 @@ import numpy as np
 from itertools import product
 from typing import List, Callable
 from nltk.stem import PorterStemmer
-#from thinc.api import set_gpu_allocator, require_gpu
+from thinc.api import set_gpu_allocator, require_gpu
 
 from models.pre_processing.dataset_embeddings_memory import EmbeddingsMemory
 from models.pre_processing.language_mapping import choose_tagger
@@ -73,7 +73,7 @@ def run_single_model(datasets : List[str] = ["DUC"],
                 pos_tag_memory_dir = f'{POS_TAG_DIR}{dataset}/{pos_tagger_model}/'
                 embed_memory_dir = f'{EMBEDS_DIR}{dataset}/{embeds_model}/'
 
-                res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, stemming, lemmatize,\
+                res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][:100], dataset, 15, 5, stemming, lemmatize,\
                 doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir, **kwargs)
         
             else: 
@@ -136,18 +136,13 @@ def run_fusion_model(datasets : List[str] = ["DUC"],
 #"ES-WICC"  : {"total" : 1640, "test" : 1640},
 #"FR-WIKI"  : {"total" : 100,  "test" : 100},
 
-#dataset_obj = DataSet(["PT-KP","ES-CACIC", "ES-WICC", "FR-WIKI", "DE-TeKET"])
-#options = itertools.product(["AvgPool", "WeightAvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
-#options = itertools.product(["AvgPool"], ["", "AvgPool", "WeightAvgPool", "NormAvgPool"])
-#options = itertools.product(["AvgPool"], ["MaskAll"])
-
 #"all-mpnet-base-v2", "longformer-paraphrase-multilingual-mpnet-base-v2"
 embeds_model = "longformer-paraphrase-multilingual-mpnet-base-v2"
 
-#run_models =["DUC"]
-#for model in run_models:
-#    options = itertools.product([""], [""])
-#    run_fusion_model([model], embeds_model, choose_tagger(model), [EmbedRank, MaskRank], False, False, options, [0.75, 0.25], True)
+#set_gpu_allocator("pytorch")
+#require_gpu(0)
+#spacy.require_gpu()
+
 
 doc_cand_modes = itertools.product([""], [""])
 pos_tags_f = False
@@ -156,16 +151,17 @@ save_result = True
 stemming = False
 lemmatize = False
 
-#run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, save_result, stemming, lemmatize, post_processing = ["whitening"])
+run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, save_result, stemming, lemmatize, post_processing = ["whitening"])
 #run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, save_result, stemming, lemmatize)
 #run_fusion_model(["SemEval"], embeds_model, choose_tagger("ES-CACIC"), [EmbedRank, MaskRank], False, False, doc_cand_modes, "harmonic", True)
 
+#from keybert.backend._utils import select_backend
+#model = select_backend("longformer-paraphrase-multilingual-mpnet-base-v2")
 
-from keybert.backend._utils import select_backend
-model = select_backend("longformer-paraphrase-multilingual-mpnet-base-v2")
-inputs = model.embedding_model.tokenizer("hi there", return_tensors="pt")
-outputs = model.embedding_model._modules['0']._modules['auto_model'](**inputs)
-print(len(outputs[0]))
-print(len(outputs[1]))
-print(len(outputs[2]))
-print(len(outputs[2][0]))
+#with open("C:/Users/artur/Desktop/test.txt", 'r') as txt:
+#    inputs = model.embedding_model.tokenizer(txt.read(), return_tensors="pt", max_length = 4096)
+#    outputs = model.embedding_model._modules['0']._modules['auto_model'](**inputs)
+
+#result = (outputs.hidden_states[1] + outputs.hidden_states[-1])/2.0
+#print(result.shape)
+#print(result[0,0,:])

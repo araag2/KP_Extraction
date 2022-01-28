@@ -1,3 +1,4 @@
+from lib2to3.pgen2 import token
 import time
 import re
 import torch
@@ -10,7 +11,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from typing import List, Tuple, Set, Callable
 
 from keybert.mmr import mmr
-from models.pre_processing.post_processing_utils import z_score_normalization, whitening
+from models.pre_processing.pre_processing_utils import tokenize
+from models.pre_processing.post_processing_utils import z_score_normalization, whitening, l1_l12_embed
 
 from utils.IO import read_from_file
 
@@ -68,11 +70,11 @@ class Document:
         """
         
         if "whitening" in post_processing:
-            inputs = model.embedding_model.tokenizer(self.raw_text, return_tensors="pt")
-            hidden_states = model.embedding_model._modules['0']._modules['auto_model'](**inputs)[2]
-
-            # avg_l1_l12 = hidden_states[]
-            # whitening(torch.unsqueeze(torch.from_numpy(embed), dim=0))[0]
+            self.doc_word_tokens, avg_l1_l12 = l1_l12_embed(self.raw_text, model)
+            self.doc_words_embeds = whitening(avg_l1_l12[0])
+            
+            #self.doc_words_embeds = np.array([embedding.detach().numpy() for embedding in avg_l1_l12[0]])
+            return np.mean(self.doc_words_embeds, axis=0)
 
         return model.embed(self.raw_text)
 
@@ -87,21 +89,42 @@ class Document:
             if cand_mode == "AvgContext":
                 embed = model.embed([stemmer.stem(word) for word in candidate.split(" ")] if stemmer else candidate.split(" "))
                 self.candidate_set_embed.append(np.mean(embed, axis=0))
+
+            elif "whitening" in post_processing:
+                token_candidate = tokenize(candidate, model)
+                possible_pos = sorted([i for i, e in enumerate(self.doc_word_tokens) if e == token_candidate[0]], reverse=True)
+                cand_embed = []
+                
+                for i in possible_pos:
+                    if token_candidate == self.doc_word_tokens[i:i+len(token_candidate)]:
+                        cand_embed.append(np.mean(self.doc_words_embeds[i:i+len(token_candidate)],axis=0))
+
+                        del self.doc_word_tokens[i:i+len(token_candidate)]
+                        self.doc_words_embeds = np.delete(self.doc_words_embeds, [*range(i, i+len(token_candidate))], axis=0)
+
+                if len(cand_embed) == 0:
+                    cand_embed = np.mean(whitening(l1_l12_embed(candidate, model)[1][0]), axis=0)
+
+                elif len(cand_embed) == 1:
+                    cand_embed = cand_embed[0]
+
+                else:
+                    cand_embed = np.mean(cand_embed, axis=0)
+
+                self.candidate_set_embed.append(cand_embed)
             else:
                 self.candidate_set_embed.append(model.embed(stemmer.stem(candidate) if stemmer else candidate))
 
         if "z_score" in post_processing:
             self.candidate_set_embed = z_score_normalization(self.candidate_set_embed, self.raw_text, model)
 
-        if "whitening" in post_processing:
-            self.candidate_set_embed = whitening(torch.stack([torch.from_numpy(embed) for embed in self.candidate_set_embed]))
-
     def extract_candidates(self, min_len : int = 5, grammar : str = "", lemmer : Callable = None):
         """
         Method that uses Regex patterns on POS tags to extract unique candidates from a tagged document and 
         stores the sentences each candidate occurs in
         """
-        candidate_sents = {}
+        #candidate_sents = {}
+        self.candidate_set = set()
 
         parser = RegexpParser(grammar)
         np_trees = list(parser.parse_sents(self.tagged_text))
@@ -112,17 +135,19 @@ class Document:
                 temp_cand_set.append(' '.join(word for word, tag in subtree.leaves()))
 
             for candidate in temp_cand_set:
-                if len(candidate) > min_len:
+                if len(candidate) > min_len and len(candidate.split(" ")) <= 5:
                     #candidate = re.sub(r'([a-zA-Z0-9\-]+)-([a-zA-Z0-9\-]+)', r'\1 - \2', candidate)
                     l_candidate = simplemma.lemmatize(candidate, lemmer) if lemmer else candidate
+                    if l_candidate not in self.candidate_set:
+                        self.candidate_set.add(l_candidate)
 
-                    if l_candidate not in candidate_sents:
-                        candidate_sents[l_candidate] = [(i,candidate.split(" "))]
-                    else:
-                        candidate_sents[l_candidate].append((i, candidate.split(" ")))
+                    #if l_candidate not in candidate_sents:
+                    #    candidate_sents[l_candidate] = [(i,candidate.split(" "))]
+                    #else:
+                    #    candidate_sents[l_candidate].append((i, candidate.split(" ")))
 
-        self.candidate_set = list(candidate_sents.keys())
-        self.candidate_sents = candidate_sents
+        self.candidate_set = sorted(list(self.candidate_set), key=len, reverse=True)
+        #self.candidate_sents = candidate_sents
 
     def top_n_candidates(self, model, top_n: int = 5, min_len : int = 5, stemmer : Callable = None, **kwargs) -> List[Tuple]:
        
