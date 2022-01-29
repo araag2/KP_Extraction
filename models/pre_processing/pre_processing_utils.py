@@ -32,4 +32,5 @@ def remove_stopwords(text : str = "") -> str:
     return res[1:]
 
 def tokenize(text : str, model: Callable) -> Tuple:
-    return [i for i in model.embedding_model.tokenizer(text, return_tensors="pt").input_ids.squeeze().tolist() if i not in special_ids]
+    tokenized = model.embedding_model.tokenizer(text, return_tensors="pt", return_attention_mask=True)
+    return [i for i in tokenized.input_ids.squeeze().tolist() if i not in special_ids], tokenized.attention_mask

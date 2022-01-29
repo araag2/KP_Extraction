@@ -25,19 +25,20 @@ from evaluation.config import POS_TAG_DIR, EMBEDS_DIR
 from evaluation.evaluation_tools import evaluate_kp_extraction, extract_dataset_labels, extract_res_labels
 
 
-def save_model_pos_tags(dataset_obj : Callable = DataSet, pos_tagger_model : str =choose_tagger("DUC"), 
-                        model : Callable = EmbedRank) -> None:
+def save_model_pos_tags(dataset_obj : Callable, pos_tagger_model : str, 
+                        model : Callable ) -> None:
 
     for dataset in dataset_obj.dataset_content:
         model.update_tagger(dataset)
+        print(pos_tagger_model)
     
         if not os.path.isdir(f'{POS_TAG_DIR}{dataset}/'):
                 os.mkdir(f'{POS_TAG_DIR}{dataset}/')
     
         model.tagger.pos_tag_to_file(dataset_obj.dataset_content[dataset], f'{POS_TAG_DIR}{dataset}/{pos_tagger_model}/', 0)
 
-def save_model_embeds(dataset_obj : Callable = DataSet, embeds_model : str = "paraphrase-multilingual-mpnet-base-v2", 
-                      pos_tagger_model : str = choose_tagger("DUC"), model : Callable = EmbedRank) -> None:
+def save_model_embeds(dataset_obj : Callable, embeds_model : str, 
+                      pos_tagger_model : str, model : Callable) -> None:
 
     for dataset in dataset_obj.dataset_content:
         model.update_tagger(dataset)
@@ -48,12 +49,12 @@ def save_model_embeds(dataset_obj : Callable = DataSet, embeds_model : str = "pa
         mem = EmbeddingsMemory(dataset_obj)
         mem.save_embeddings(dataset_obj, model.model, f'{embeds_model}', EMBEDS_DIR, POS_tagger_spacy(f'{pos_tagger_model}'), False, 0)
 
-def run_single_model(datasets : List[str] = ["DUC"], 
-                    embeds_model : str = "paraphrase-multilingual-mpnet-base-v2", 
-                    pos_tagger_model : str = choose_tagger("DUC"), model_class : Callable = EmbedRank,
-                    save_pos_tags : bool = False, save_embeds : bool = False, 
-                    doc_cand_modes : List[List[str]] = [[""]], use_memory : bool = False,
-                    stemming : bool = False, lemmatize : bool = False, 
+def run_single_model(datasets : List[str], 
+                    embeds_model : str, 
+                    pos_tagger_model : str, model_class : Callable,
+                    save_pos_tags : bool, save_embeds : bool, 
+                    doc_cand_modes : List[List[str]], use_memory : bool,
+                    stemming : bool, lemmatize : bool, 
                     **kwargs) -> None:
 
     dataset_obj = DataSet(datasets)
@@ -86,12 +87,12 @@ def run_single_model(datasets : List[str] = ["DUC"],
 
     return
 
-def run_fusion_model(datasets : List[str] = ["DUC"], 
-                    embeds_model : str = "paraphrase-multilingual-mpnet-base-v2", 
-                    pos_tagger_model : str = choose_tagger("DUC"), models : List[Callable] = [EmbedRank, MaskRank],
-                    save_pos_tags : bool = False, save_embeds : bool = False, 
-                    doc_cand_modes : List[List[str]] = [[""]], weights : List[float] = [0.5, 0.5], 
-                    use_memory : bool = False, stemming : bool = False, lemmatize : bool = False, **kwargs) -> None:
+def run_fusion_model(datasets : List[str], 
+                    embeds_model : str, 
+                    pos_tagger_model : str, models : List[Callable],
+                    save_pos_tags : bool, save_embeds : bool, 
+                    doc_cand_modes : List[List[str]], weights : List[float], 
+                    use_memory : bool, stemming : bool , lemmatize : bool, **kwargs) -> None:
 
     dataset_obj = DataSet(datasets)
     model_list = [model(f'{embeds_model}', f'{pos_tagger_model}') for model in models]
@@ -145,14 +146,14 @@ embeds_model = "longformer-paraphrase-multilingual-mpnet-base-v2"
 
 
 doc_cand_modes = itertools.product([""], [""])
-pos_tags_f = True
-embeds_f = True
-save_result = True
+pos_tags_f = False
+embeds_f = False
+use_memory = True
 stemming = False
 lemmatize = False
 
-run_single_model(["PL-PAK"], embeds_model, choose_tagger("PL-PAK"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, save_result, stemming, lemmatize)
-#run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, save_result, stemming, lemmatize)
+run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize, post_processing = ["whitening"])
+#run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize)
 #run_fusion_model(["SemEval"], embeds_model, choose_tagger("ES-CACIC"), [EmbedRank, MaskRank], False, False, doc_cand_modes, "harmonic", True)
 
 #from keybert.backend._utils import select_backend

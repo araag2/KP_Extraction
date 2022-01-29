@@ -25,9 +25,10 @@ def whitening(embeddings : torch.tensor) -> np.array:
     return np.array([embedding.detach().numpy() for embedding in embeddings])
 
 def l1_l12_embed(text : str, model: Callable) -> Tuple:
-    inputs = model.embedding_model.tokenizer(text, return_tensors="pt", max_length = 4096)
+    inputs = model.embedding_model.tokenizer(text, return_tensors="pt", max_length = 4096, return_attention_mask=True)
     outputs = model.embedding_model._modules['0']._modules['auto_model'](**inputs)
     result = (outputs.hidden_states[1] + outputs.hidden_states[-1])/2.0
-    # example result[0,0,:]
 
-    return (inputs.input_ids.squeeze().tolist(), result)
+    mean_pooled = result.sum(axis=1) / inputs.attention_mask.sum(axis=-1).unsqueeze(-1)
+
+    return (inputs.input_ids.squeeze().tolist(), result, mean_pooled)

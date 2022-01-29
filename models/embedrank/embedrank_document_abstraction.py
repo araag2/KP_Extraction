@@ -70,11 +70,11 @@ class Document:
         """
         
         if "whitening" in post_processing:
-            self.doc_word_tokens, avg_l1_l12 = l1_l12_embed(self.raw_text, model)
-            self.doc_words_embeds = whitening(avg_l1_l12[0])
+            self.doc_word_tokens, l1_l12_token_embeds, doc_embed = l1_l12_embed(self.raw_text, model)
+            self.doc_words_embeds = l1_l12_token_embeds[0]
             
             #self.doc_words_embeds = np.array([embedding.detach().numpy() for embedding in avg_l1_l12[0]])
-            return np.mean(self.doc_words_embeds, axis=0)
+            return doc_embed
 
         return model.embed(self.raw_text)
 
@@ -91,25 +91,28 @@ class Document:
                 self.candidate_set_embed.append(np.mean(embed, axis=0))
 
             elif "whitening" in post_processing:
-                token_candidate = tokenize(candidate, model)
+                token_candidate, attention_mask = tokenize(candidate, model)
                 possible_pos = sorted([i for i, e in enumerate(self.doc_word_tokens) if e == token_candidate[0]], reverse=True)
                 cand_embed = []
                 
                 for i in possible_pos:
                     if token_candidate == self.doc_word_tokens[i:i+len(token_candidate)]:
-                        cand_embed.append(np.mean(self.doc_words_embeds[i:i+len(token_candidate)],axis=0))
+                        cand_embed.append(self.doc_words_embeds[i:i+len(token_candidate)].sum(axis=0) / attention_mask.sum(axis=-1).unsqueeze(-1))
 
                         del self.doc_word_tokens[i:i+len(token_candidate)]
-                        self.doc_words_embeds = np.delete(self.doc_words_embeds, [*range(i, i+len(token_candidate))], axis=0)
+                        #self.doc_words_embeds = np.delete(self.doc_words_embeds, [*range(i, i+len(token_candidate))], axis=0)
+                        self.doc_words_embeds = torch.cat((self.doc_words_embeds[:i], self.doc_words_embeds[i+len(token_candidate):]))
 
                 if len(cand_embed) == 0:
-                    cand_embed = np.mean(whitening(l1_l12_embed(candidate, model)[1][0]), axis=0)
+                    #cand_embed = np.mean(whitening(l1_l12_embed(candidate, model)[1][0]), axis=0)
+                    cand_embed = l1_l12_embed(candidate, model)[2]
 
                 elif len(cand_embed) == 1:
                     cand_embed = cand_embed[0]
 
                 else:
-                    cand_embed = np.mean(cand_embed, axis=0)
+                    #cand_embed = np.mean(cand_embed, axis=0)
+                    cand_embed = torch.mean(torch.stack(cand_embed), 0)
 
                 self.candidate_set_embed.append(cand_embed)
             else:
@@ -117,6 +120,11 @@ class Document:
 
         if "z_score" in post_processing:
             self.candidate_set_embed = z_score_normalization(self.candidate_set_embed, self.raw_text, model)
+
+        if "whitening" in post_processing:
+            whitened_embeds = whitening(torch.stack([self.doc_embed] + self.candidate_set_embed).squeeze(1))
+            self.doc_embed = whitened_embeds[0]
+            self.candidate_set_embed = whitened_embeds[1:]
 
     def extract_candidates(self, min_len : int = 5, grammar : str = "", lemmer : Callable = None):
         """
@@ -135,7 +143,7 @@ class Document:
                 temp_cand_set.append(' '.join(word for word, tag in subtree.leaves()))
 
             for candidate in temp_cand_set:
-                if len(candidate) > min_len and len(candidate.split(" ")) <= 5:
+                if len(candidate) >= min_len and len(candidate.split(" ")) <= 5:
                     #candidate = re.sub(r'([a-zA-Z0-9\-]+)-([a-zA-Z0-9\-]+)', r'\1 - \2', candidate)
                     l_candidate = simplemma.lemmatize(candidate, lemmer) if lemmer else candidate
                     if l_candidate not in self.candidate_set:
@@ -165,6 +173,7 @@ class Document:
         t = time.time()
         self.embed_candidates(model, stemmer, cand_mode, post_processing)
         print(f'Embed Candidates = {time.time() -  t:.2f}')
+
 
         doc_sim = []
         if "MMR" not in kwargs:

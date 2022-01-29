@@ -102,5 +102,6 @@ class POS_tagger_spacy(POS_tagger):
 
         for i in range(index, len(input_docs)):
                 torch.cuda.empty_cache()
+                print(self.pos_tag_str(input_docs[i][0]))
                 write_to_file(f'{output_path}{i}', self.pos_tag_str(input_docs[i][0]))
                 print(f'Tagged and saved document {i}')  
