@@ -152,7 +152,7 @@ use_memory = True
 stemming = False
 lemmatize = False
 
-run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize, post_processing = ["whitening"])
+run_single_model(["NUS"], embeds_model, choose_tagger("NUS"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize, post_processing = ["whitening"])
 #run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize)
 #run_fusion_model(["SemEval"], embeds_model, choose_tagger("ES-CACIC"), [EmbedRank, MaskRank], False, False, doc_cand_modes, "harmonic", True)
 

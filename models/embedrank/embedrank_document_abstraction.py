@@ -122,7 +122,8 @@ class Document:
             self.candidate_set_embed = z_score_normalization(self.candidate_set_embed, self.raw_text, model)
 
         if "whitening" in post_processing:
-            whitened_embeds = whitening(torch.stack([self.doc_embed] + self.candidate_set_embed).squeeze(1))
+            #whitened_embeds = whitening(torch.stack([self.doc_embed] + self.candidate_set_embed).squeeze(1))
+            whitened_embeds =  np.array([embedding.detach().numpy() for embedding in torch.stack([self.doc_embed] + self.candidate_set_embed).squeeze(1)])
             self.doc_embed = whitened_embeds[0]
             self.candidate_set_embed = whitened_embeds[1:]
 

@@ -1,6 +1,7 @@
 import os, os.path
 import json
 import re
+import simplemma
 
 from typing import List, Tuple
 from bs4 import BeautifulSoup
@@ -8,6 +9,8 @@ from bs4 import BeautifulSoup
 from utils.IO import read_from_file, write_to_file
 from models.pre_processing.pos_tagging import *
 from datasets.config import DATASET_DIR
+from nltk.stem import PorterStemmer
+
 
 class DataSet:
     """
@@ -28,7 +31,6 @@ class DataSet:
                       * ES-CACIC
                       * ES-WICC
                       * FR-WIKI
-                      * PL-PAK
             unsupervised: Requested supervision criteria
         """
 
@@ -41,8 +43,7 @@ class DataSet:
                                    "PT-KP"    : "xml",
                                    "ES-CACIC" : "txt", 
                                    "ES-WICC"  : "txt", 
-                                   "FR-WIKI"  : "txt",
-                                   "PL-PAK"  : "txt"}
+                                   "FR-WIKI"  : "txt"}
 
         self.data_subset = ["train", "dev", "test"]
 
@@ -120,10 +121,33 @@ class DataSet:
         for subset in self.data_subset:
             if subset in dir_cont:
                 subset_dir = f'{dataset_dir}/{subset}'
+                
+                #total_keywords = 0
+                #found_keywords = 0
+                #stemmer = PorterStemmer()
+                #lemmer = simplemma.load_data("pl")
 
                 for file in os.listdir(subset_dir):
                     doc = open(f'{subset_dir}/{file}', 'r', encoding='utf-8').read()
                     kp = [line.rstrip() for line in open(f'{dataset_dir}/references/{file[:-4]}.key', 'r', encoding='utf-8').readlines() if line.strip()]
+
+
+                    #for line in open(f'{dataset_dir}/references/{file[:-4]}.key', 'r', encoding='utf-8').readlines():
+                    #    if line.strip():
+                    #        total_keywords += 1
+                    #        stemmed = stemmer.stem(line.lower().strip())
+                    #        lemmed = simplemma.lemmatize(line.lower().strip(), lemmer)
+                    #        if stemmed in doc.lower() or lemmed in doc.lower():
+                    #            found_keywords += 1
+                    #        else:
+                    #            print(f"didn't find {line}")
+                    #            print(doc)
+
                     res.append((doc, kp))
                     print(f'doc number {file[:-4]}')
+
+                #print("|Statistics for PL-PAK|")
+                #print(f'Found Key-Phrases: {found_keywords}')
+                #print(f'Total Key-Phrases: {total_keywords}')
+                #print(f'Percentage of unavailable key-phrases: {((1 - found_keywords/total_keywords)*100):.3}%')
         return res
