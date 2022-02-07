@@ -116,7 +116,7 @@ def run_fusion_model(datasets : List[str],
 
                 print(embed_memory_dir)
 
-                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, stemming, lemmatize,\
+                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:100], dataset, 15, 5, stemming, lemmatize,\
                 doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir, **kwargs)
         
             else: 
@@ -152,9 +152,8 @@ use_memory = True
 stemming = False
 lemmatize = False
 
-run_single_model(["NUS"], embeds_model, choose_tagger("NUS"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize, post_processing = ["whitening"])
-#run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize)
-#run_fusion_model(["SemEval"], embeds_model, choose_tagger("ES-CACIC"), [EmbedRank, MaskRank], False, False, doc_cand_modes, "harmonic", True)
+run_single_model(["DE-TeKET"], embeds_model, choose_tagger("DE-TeKET"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize)
+#run_fusion_model(["DE-TeKET"], embeds_model, choose_tagger("DE-TeKET"), [EmbedRank, MaskRank], pos_tags_f, embeds_f, doc_cand_modes, "harmonic", use_memory, stemming, lemmatize)
 
 #from keybert.backend._utils import select_backend
 #model = select_backend("longformer-paraphrase-multilingual-mpnet-base-v2")

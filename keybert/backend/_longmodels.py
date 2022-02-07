@@ -24,6 +24,7 @@ def create_longformer(model : str, save_model_to : str, attention_window : int, 
     tokenizer._tokenizer.truncation['max_length'] = attention_window
 
     current_max_pos, embed_size = model.embeddings.position_embeddings.weight.shape
+    #current_max_pos = 130
     max_pos += 2  # NOTE: RoBERTa has positions 0,1 reserved, so embedding size is max position + 2
     config.max_position_embeddings = max_pos
 
@@ -43,6 +44,7 @@ def create_longformer(model : str, save_model_to : str, attention_window : int, 
 
     # replace the `modeling_bert.BertSelfAttention` object with `LongformerSelfAttention`
     config.attention_window = [attention_window] * config.num_hidden_layers
+
     for i, layer in enumerate(model.encoder.layer):
         longformer_self_attn = LongformerSelfAttention(config, layer_id=i)
         longformer_self_attn.query = layer.attention.self.query

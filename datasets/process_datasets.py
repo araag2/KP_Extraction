@@ -31,6 +31,7 @@ class DataSet:
                       * ES-CACIC
                       * ES-WICC
                       * FR-WIKI
+                      * DE-TeKET
             unsupervised: Requested supervision criteria
         """
 
@@ -38,12 +39,13 @@ class DataSet:
         self.supported_datasets = {"DUC"      : "xml", 
                                    "NUS"      : "xml", 
                                    "Inspec"   : "xml",
-                                   "SemEval"   : "txt",
+                                   "SemEval"  : "txt",
                                    "PubMed"   : "xml",
                                    "PT-KP"    : "xml",
                                    "ES-CACIC" : "txt", 
                                    "ES-WICC"  : "txt", 
-                                   "FR-WIKI"  : "txt"}
+                                   "FR-WIKI"  : "txt",
+                                   "DE-TeKET" : "txt"}
 
         self.data_subset = ["train", "dev", "test"]
 

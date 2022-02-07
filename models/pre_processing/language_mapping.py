@@ -11,7 +11,7 @@ pos_taggers = { "DUC"      : "en_core_web_trf",
                 "ES-CACIC" : "es_dep_news_trf", 
                 "ES-WICC"  : "es_dep_news_trf", 
                 "FR-WIKI"  : "fr_dep_news_trf",
-                "PL-PAK"   : "pl_core_news_lg"}
+                "DE-TeKET" : "de_core_news_lg"}
 
 lemmatizers = { "DUC"      : "en", 
                 "NUS"      : "en", 
@@ -22,7 +22,7 @@ lemmatizers = { "DUC"      : "en",
                 "ES-CACIC" : "es", 
                 "ES-WICC"  : "es", 
                 "FR-WIKI"  : "fr",
-                "PL-PAK"   : "pl"}
+                "DE-TeKET" : "de"}
 
 def choose_tagger(model : str = "") -> POS_tagger_spacy:
     return pos_taggers[model]
