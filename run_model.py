@@ -116,7 +116,7 @@ def run_fusion_model(datasets : List[str],
 
                 print(embed_memory_dir)
 
-                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:100], dataset, 15, 5, stemming, lemmatize,\
+                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][:50], dataset, 15, 5, stemming, lemmatize,\
                 doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir, **kwargs)
         
             else: 
@@ -136,15 +136,12 @@ def run_fusion_model(datasets : List[str],
 #"ES-CACIC" : {"total" : 888,  "test" : 888},
 #"ES-WICC"  : {"total" : 1640, "test" : 1640},
 #"FR-WIKI"  : {"total" : 100,  "test" : 100},
+#"DE-TeKET"  : {"total" : 10,  "test" : 10},
 
 #"all-mpnet-base-v2", "longformer-paraphrase-multilingual-mpnet-base-v2"
 embeds_model = "longformer-paraphrase-multilingual-mpnet-base-v2"
 
-#set_gpu_allocator("pytorch")
-#require_gpu(0)
-#spacy.require_gpu()
-
-
+torch.cuda.is_available = lambda : False
 doc_cand_modes = itertools.product([""], [""])
 pos_tags_f = False
 embeds_f = False
@@ -152,16 +149,5 @@ use_memory = True
 stemming = False
 lemmatize = False
 
-run_single_model(["DE-TeKET"], embeds_model, choose_tagger("DE-TeKET"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize)
-#run_fusion_model(["DE-TeKET"], embeds_model, choose_tagger("DE-TeKET"), [EmbedRank, MaskRank], pos_tags_f, embeds_f, doc_cand_modes, "harmonic", use_memory, stemming, lemmatize)
-
-#from keybert.backend._utils import select_backend
-#model = select_backend("longformer-paraphrase-multilingual-mpnet-base-v2")
-
-#with open("C:/Users/artur/Desktop/test.txt", 'r') as txt:
-#    inputs = model.embedding_model.tokenizer(txt.read(), return_tensors="pt", max_length = 4096)
-#    outputs = model.embedding_model._modules['0']._modules['auto_model'](**inputs)
-
-#result = (outputs.hidden_states[1] + outputs.hidden_states[-1])/2.0
-#print(result.shape)
-#print(result[0,0,:])
+run_single_model(["NUS"], embeds_model, choose_tagger("NUS"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize, post_processing = ["attention"])
+#run_fusion_model(["NUS"], embeds_model, choose_tagger("NUS"), [EmbedRank, MaskRank], pos_tags_f, embeds_f, doc_cand_modes, "harmonic", use_memory, stemming, lemmatize,  post_processing = ["attention"])

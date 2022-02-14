@@ -40,7 +40,6 @@ class FusionModel:
 
         #TODO: Need to allign this if candidate extraction differs between models 
         kp_score = {k: {} for k in range(doc_num)}
-        print(self.models)
         for i in range(doc_num):
             if isinstance(self.weights, list):
                 for j in range(len(self.models)):

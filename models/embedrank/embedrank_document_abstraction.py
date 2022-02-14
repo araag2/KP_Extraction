@@ -12,7 +12,7 @@ from typing import List, Tuple, Set, Callable
 
 from keybert.mmr import mmr
 from models.pre_processing.pre_processing_utils import tokenize
-from models.pre_processing.post_processing_utils import whitening_np, z_score_normalization, zscore, l1_l12_embed
+from models.pre_processing.post_processing_utils import whitening_np, z_score_normalization, l1_l12_embed, tokenize_attention_embed
 
 from utils.IO import read_from_file
 
@@ -69,11 +69,8 @@ class Document:
             The default value just embeds the document normally.
         """
         
-        if "whitening" in post_processing:
-            self.doc_word_tokens, l1_l12_token_embeds, doc_embed = l1_l12_embed(self.raw_text, model)
-            self.doc_words_embeds = l1_l12_token_embeds[0]
-        
-            return doc_embed
+        if "attention" in post_processing:
+            self.doc_word_tokens, self.attention_matrix = tokenize_attention_embed(self.raw_text, model)
 
         return model.embed(self.raw_text)
 
@@ -83,49 +80,50 @@ class Document:
             The default value just embeds candidates directly.
         """
         self.candidate_set_embed = []
+        
+        #TODO
+        #line_sum = torch.Tensor([torch.sum(head, dim=0) for head in self.attention_matrix])
+        #line_attention = torch.sum(line_sum, dim=1)
+        #print(line_attention)
+        #print(len(line_attention))
 
+        line_sum = [torch.sum(head, dim=0).tolist() for head in self.attention_matrix]
+        line_attention = list(map(sum, zip(*line_sum)))
+        
         for candidate in self.candidate_set:
             if cand_mode == "AvgContext":
                 embed = model.embed([stemmer.stem(word) for word in candidate.split(" ")] if stemmer else candidate.split(" "))
                 self.candidate_set_embed.append(np.mean(embed, axis=0))
 
-            elif "whitening" in post_processing:
-                token_candidate, attention_mask = tokenize(candidate, model)
-                possible_pos = sorted([i for i, e in enumerate(self.doc_word_tokens) if e == token_candidate[0]], reverse=True)
+            elif "attention" in post_processing:
+                cand_id_tokens, cand_tokens = tokenize(candidate, model)
+
+                if len(cand_tokens) == 0:
+                    self.candidate_set_embed.append(model.embed(stemmer.stem(candidate) if stemmer else candidate))
+                    continue
+
+                possible_pos = sorted([i for i, e in enumerate(self.doc_word_tokens) if e == cand_id_tokens[0]])
                 cand_embed = []
-                
+                embed = model.embed(cand_tokens)
+
                 for i in possible_pos:
-                    if token_candidate == self.doc_word_tokens[i:i+len(token_candidate)]:
-                        cand_embed.append(self.doc_words_embeds[i:i+len(token_candidate)].sum(axis=0) / attention_mask.sum(axis=-1).unsqueeze(-1))
+                    if cand_id_tokens == self.doc_word_tokens[i:i+len(cand_id_tokens)]:        
             
-                        del self.doc_word_tokens[i:i+len(token_candidate)]
-                        #self.doc_words_embeds = np.delete(self.doc_words_embeds, [*range(i, i+len(token_candidate))], axis=0)
-                        self.doc_words_embeds = torch.cat((self.doc_words_embeds[:i], self.doc_words_embeds[i+len(token_candidate):]))
+                        for j in range(len(embed)):
+                            cand_embed.append(embed[j] * line_attention[i+j])
             
                 if len(cand_embed) == 0:
-                    #cand_embed = np.mean(whitening(l1_l12_embed(candidate, model)[1][0]), axis=0)
-                    cand_embed = l1_l12_embed(candidate, model)[2]
-            
-                elif len(cand_embed) == 1:
-                    cand_embed = cand_embed[0]
-            
-                else:
-                    #cand_embed = np.mean(cand_embed, axis=0)
-                    cand_embed = torch.mean(torch.stack(cand_embed), 0)
-            
+                    cand_embed = embed
+                
+                cand_embed = np.mean(cand_embed, axis = 0)
                 self.candidate_set_embed.append(cand_embed)
+
             else:
                 self.candidate_set_embed.append(model.embed(stemmer.stem(candidate) if stemmer else candidate))
 
         if "z_score" in post_processing:
             self.candidate_set_embed = z_score_normalization(self.candidate_set_embed, self.raw_text, model)
 
-        if "whitening" in post_processing:
-            whitened_embeds = zscore(np.array([embedding.detach().numpy() for embedding in ([self.doc_embed] + self.candidate_set_embed)]))    
-            #whitened_embeds = whitening(torch.stack([self.doc_embed] + self.candidate_set_embed).squeeze(1))
-            #whitened_embeds =  np.array([embedding.detach().numpy() for embedding in torch.stack([self.doc_embed] + self.candidate_set_embed).squeeze(1)])
-            self.doc_embed = whitened_embeds[0]
-            self.candidate_set_embed = whitened_embeds[1:]
 
     def extract_candidates(self, min_len : int = 5, grammar : str = "", lemmer : Callable = None):
         """
@@ -184,6 +182,8 @@ class Document:
             doc_sim = mmr(self.doc_embed.reshape(1, -1), self.candidate_set_embed, self.candidate_set, n, kwargs["MMR"])
 
         candidate_score = sorted([(self.candidate_set[i], doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
+        
+        self.attention_matrix = None
 
         if top_n == -1:
             return candidate_score, [candidate[0] for candidate in candidate_score]
