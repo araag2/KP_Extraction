@@ -139,7 +139,7 @@ def run_fusion_model(datasets : List[str],
 #"DE-TeKET"  : {"total" : 10,  "test" : 10},
 
 #"all-mpnet-base-v2", "longformer-paraphrase-multilingual-mpnet-base-v2"
-embeds_model = "longformer-paraphrase-multilingual-mpnet-base-v2"
+embeds_model = "longformerhf-paraphrase-multilingual-mpnet-base-v2"
 
 torch.cuda.is_available = lambda : False
 doc_cand_modes = itertools.product([""], [""])
@@ -149,5 +149,5 @@ use_memory = True
 stemming = False
 lemmatize = False
 
-run_single_model(["NUS"], embeds_model, choose_tagger("NUS"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize, post_processing = ["attention"])
+run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize, post_processing = ["global_attention"])
 #run_fusion_model(["NUS"], embeds_model, choose_tagger("NUS"), [EmbedRank, MaskRank], pos_tags_f, embeds_f, doc_cand_modes, "harmonic", use_memory, stemming, lemmatize,  post_processing = ["attention"])

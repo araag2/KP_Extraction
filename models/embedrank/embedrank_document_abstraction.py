@@ -12,7 +12,7 @@ from typing import List, Tuple, Set, Callable
 
 from keybert.mmr import mmr
 from models.pre_processing.pre_processing_utils import tokenize
-from models.pre_processing.post_processing_utils import whitening_np, z_score_normalization, l1_l12_embed, tokenize_attention_embed
+from models.pre_processing.post_processing_utils import embed_hf, embed_hf_global_att, whitening_np, z_score_normalization, l1_l12_embed, tokenize_attention_embed
 
 from utils.IO import read_from_file
 
@@ -69,8 +69,8 @@ class Document:
             The default value just embeds the document normally.
         """
         
-        if "attention" in post_processing:
-            self.doc_word_tokens, self.attention_matrix = tokenize_attention_embed(self.raw_text, model)
+        if "global_attention" in post_processing:
+            return embed_hf_global_att(self.raw_text, model)[0]
 
         return model.embed(self.raw_text)
 
@@ -80,43 +80,40 @@ class Document:
             The default value just embeds candidates directly.
         """
         self.candidate_set_embed = []
-        
-        #TODO
-        #line_sum = torch.Tensor([torch.sum(head, dim=0) for head in self.attention_matrix])
-        #line_attention = torch.sum(line_sum, dim=1)
-        #print(line_attention)
-        #print(len(line_attention))
 
-        line_sum = [torch.sum(head, dim=0).tolist() for head in self.attention_matrix]
-        line_attention = list(map(sum, zip(*line_sum)))
+        #line_sum = [torch.sum(head, dim=0).tolist() for head in self.attention_matrix]
+        #line_attention = list(map(sum, zip(*line_sum)))
         
         for candidate in self.candidate_set:
             if cand_mode == "AvgContext":
                 embed = model.embed([stemmer.stem(word) for word in candidate.split(" ")] if stemmer else candidate.split(" "))
                 self.candidate_set_embed.append(np.mean(embed, axis=0))
 
-            elif "attention" in post_processing:
-                cand_id_tokens, cand_tokens = tokenize(candidate, model)
+            #elif "attention" in post_processing:
+            #    cand_id_tokens, cand_tokens = tokenize(candidate, model)
+            #
+            #    if len(cand_tokens) == 0:
+            #        self.candidate_set_embed.append(model.embed(stemmer.stem(candidate) if stemmer else candidate))
+            #        continue
+            #
+            #    possible_pos = sorted([i for i, e in enumerate(self.doc_word_tokens) if e == cand_id_tokens[0]])
+            #    cand_embed = []
+            #    embed = model.embed(cand_tokens)
+            #
+            #    for i in possible_pos:
+            #        if cand_id_tokens == self.doc_word_tokens[i:i+len(cand_id_tokens)]:        
+            #
+            #            for j in range(len(embed)):
+            #                cand_embed.append(embed[j] * line_attention[i+j])
+            #
+            #    if len(cand_embed) == 0:
+            #        cand_embed = embed
+            #    
+            #    cand_embed = np.mean(cand_embed, axis = 0)
+            #    self.candidate_set_embed.append(cand_embed)
 
-                if len(cand_tokens) == 0:
-                    self.candidate_set_embed.append(model.embed(stemmer.stem(candidate) if stemmer else candidate))
-                    continue
-
-                possible_pos = sorted([i for i, e in enumerate(self.doc_word_tokens) if e == cand_id_tokens[0]])
-                cand_embed = []
-                embed = model.embed(cand_tokens)
-
-                for i in possible_pos:
-                    if cand_id_tokens == self.doc_word_tokens[i:i+len(cand_id_tokens)]:        
-            
-                        for j in range(len(embed)):
-                            cand_embed.append(embed[j] * line_attention[i+j])
-            
-                if len(cand_embed) == 0:
-                    cand_embed = embed
-                
-                cand_embed = np.mean(cand_embed, axis = 0)
-                self.candidate_set_embed.append(cand_embed)
+            elif "global_attention" in post_processing:
+                self.candidate_set_embed.append(embed_hf(candidate, model)[0])
 
             else:
                 self.candidate_set_embed.append(model.embed(stemmer.stem(candidate) if stemmer else candidate))
