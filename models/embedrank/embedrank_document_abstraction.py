@@ -70,7 +70,7 @@ class Document:
         """
         
         if "global_attention" in post_processing:
-            return embed_hf_global_att(self.raw_text, model)[0]
+            return embed_hf(self.raw_text, model)[0]
 
         return model.embed(self.raw_text)
 

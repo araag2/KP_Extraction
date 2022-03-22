@@ -67,6 +67,7 @@ class POS_tagger_spacy(POS_tagger):
     def pos_tag_text_sents_words(self, text: str = "", memory: bool = False, id : int = 0 ) \
     -> Tuple[List[List[Tuple[str, str]]], List[str], List[List[str]]]:
 
+        print(f'{memory}{id}')
         doc = self.tagger(text) if not memory else read_from_file(f'{memory}{id}')
         tagged_text = []
         doc_word_sents = []

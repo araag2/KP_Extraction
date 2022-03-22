@@ -7,7 +7,6 @@ import numpy as np
 from itertools import product
 from typing import List, Callable
 from nltk.stem import PorterStemmer
-from thinc.api import set_gpu_allocator, require_gpu
 
 from models.pre_processing.dataset_embeddings_memory import EmbeddingsMemory
 from models.pre_processing.language_mapping import choose_tagger
@@ -30,7 +29,6 @@ def save_model_pos_tags(dataset_obj : Callable, pos_tagger_model : str,
 
     for dataset in dataset_obj.dataset_content:
         model.update_tagger(dataset)
-        print(pos_tagger_model)
     
         if not os.path.isdir(f'{POS_TAG_DIR}{dataset}/'):
                 os.mkdir(f'{POS_TAG_DIR}{dataset}/')
@@ -139,7 +137,7 @@ def run_fusion_model(datasets : List[str],
 #"DE-TeKET"  : {"total" : 10,  "test" : 10},
 
 #"all-mpnet-base-v2", "longformer-paraphrase-multilingual-mpnet-base-v2"
-embeds_model = "longformerhf-paraphrase-multilingual-mpnet-base-v2"
+embeds_model = "longformer-paraphrase-multilingual-mpnet-base-v2"
 
 torch.cuda.is_available = lambda : False
 doc_cand_modes = itertools.product([""], [""])
@@ -149,5 +147,31 @@ use_memory = True
 stemming = False
 lemmatize = False
 
-run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize, post_processing = ["global_attention"])
+#run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize,  post_processing = ["global_attention"])
 #run_fusion_model(["NUS"], embeds_model, choose_tagger("NUS"), [EmbedRank, MaskRank], pos_tags_f, embeds_f, doc_cand_modes, "harmonic", use_memory, stemming, lemmatize,  post_processing = ["attention"])
+
+#model = EmbedRank(f'{embeds_model}', "en_core_web_trf")
+#dir = "C:\\Users\\artur\\Desktop\\wikipedia\\WikipediaEpidemics-dataset\\wikipedia_articles"
+#references = "C:\\Users\\artur\\Desktop\\wikipedia\\WikipediaEpidemics-dataset\\references"
+#kp = {}
+#
+#with open(f'{references}\\test.json', 'r') as s_json:
+#    kp = json.load(s_json)
+#    for f in os.listdir(dir):
+#        if f not in kp:
+#            with open(f'{dir}\\{f}', 'r', encoding='utf-8') as file:
+#                txt = file.read()
+#                doc_kp = [k.lower() for k in model.extract_kp_from_doc(txt, 30, 5)[1] if len(k.split(" ")) <=6 and not any(x in k for x in "{<>=\"=}|+:[].")]
+#                doc_kp = list(dict.fromkeys(doc_kp))[:50]
+#                kp[f] = doc_kp
+#
+#                print(f)
+#                print(doc_kp)
+#
+#                with open(f'{references}\\test-temp.json', "w") as temp_json:
+#                    json.dump(kp, temp_json, indent=4, separators=(',', ': '))
+#
+#with open(f'{references}\\test-temp.json', "r") as source, open(f'{references}\\test.json', "w") as dest:
+#    json.dump(json.load(source), dest, indent=4, separators=(',', ': '))
+#
+#print(kp)

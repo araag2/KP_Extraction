@@ -74,18 +74,22 @@ def tokenize_attention_embed(text : str, model: Callable) -> Tuple:
 
 def embed_hf(text: str, model: Callable) -> Tuple:
     # Tokenize sentences
-    inputs = model.embedding_model.tokenizer(text, padding=True, truncation=True, return_tensors='pt', max_length = 2048)
+    inputs = model.embedding_model.tokenizer(text, padding=True, truncation=True, return_tensors='pt')
 
-    # Compute token embeddings
-    outputs = model.embedding_model._modules['0']._modules['auto_model'](**inputs)
+    with torch.no_grad():
+        # Compute token embeddings
+        outputs = model.embedding_model._modules['0']._modules['auto_model'](**inputs)
 
     # Perform pooling. In this case, mean pooling.
     embed = mean_pooling(outputs, inputs['attention_mask'])
     return embed.detach().numpy()
 
 def embed_hf_global_att(text: str, model: Callable) -> Tuple:
+    text = text.strip()
+    text = text.lower()
+
     # Tokenize sentences
-    inputs = model.embedding_model.tokenizer(text, padding=True, truncation=True, return_tensors='pt', max_length = 2048)
+    inputs = model.embedding_model.tokenizer(text, padding=True, truncation="longest_first", return_tensors='pt', max_length = 2048)
     sequence_l = len(inputs['attention_mask'][0])
 
     global_att = torch.zeros(1, sequence_l)
@@ -93,11 +97,9 @@ def embed_hf_global_att(text: str, model: Callable) -> Tuple:
     for pos in random_sample:
         global_att[0][pos] = 1
 
-    print(inputs["global_attention_mask"])
     # Compute token embeddings
     outputs = model.embedding_model._modules['0']._modules['auto_model'](**inputs, global_attention_mask = global_att)
 
     # Perform pooling. In this case, max pooling.    
-    quit()
     embed = mean_pooling(outputs, inputs['attention_mask'])
     return embed.detach().numpy()

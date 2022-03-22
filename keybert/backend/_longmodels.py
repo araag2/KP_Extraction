@@ -65,57 +65,6 @@ def create_longformer(model_n : str, save_model_to : str, attention_window : int
     tokenizer.save_pretrained(save_model_to)
     return callable_model
 
-def create_longformer_hf(model_n : str, save_model_to : str, attention_window : int, max_pos : int ) -> Callable :
-    model = RobertaForMaskedLM.from_pretrained(f'sentence-transformers/{model_n}')
-    tokenizer = RobertaTokenizerFast.from_pretrained(f'sentence-transformers/{model_n}', model_max_length=max_pos)
-    config = model.config
-
-    # TODO: Check this
-    tokenizer.model_max_length = max_pos
-    tokenizer.init_kwargs['model_max_length'] = max_pos
-    tokenizer._tokenizer.truncation['max_length'] = attention_window
-
-    current_max_pos, embed_size = model.roberta.embeddings.position_embeddings.weight.shape
-    #current_max_pos = 130
-    max_pos += 2  # NOTE: RoBERTa has positions 0,1 reserved, so embedding size is max position + 2
-    config.max_position_embeddings = max_pos
-
-    assert max_pos > current_max_pos
-    # allocate a larger position embedding matrix
-    new_pos_embed = model.roberta.embeddings.position_embeddings.weight.new_empty(max_pos, embed_size)
-    # copy position embeddings over and over to initialize the new position embeddings
-    
-    k = 2
-    step = current_max_pos - 2
-    while k < max_pos - 1:
-        new_pos_embed[k:(k + step)] = model.roberta.embeddings.position_embeddings.weight[2:]
-        k += step
-    
-    model.roberta.embeddings.position_embeddings.weight.data = new_pos_embed
-    model.roberta.embeddings.position_ids.data = torch.tensor([i for i in range(max_pos)]).reshape(1, max_pos)
-
-    # replace the `modeling_bert.BertSelfAttention` object with `LongformerSelfAttention`
-    config.attention_window = [attention_window] * config.num_hidden_layers
-
-    for i, layer in enumerate(model.roberta.encoder.layer):
-        longformer_self_attn = LongformerSelfAttention(config, layer_id=i)
-        longformer_self_attn.query = layer.attention.self.query
-        longformer_self_attn.key = layer.attention.self.key
-        longformer_self_attn.value = layer.attention.self.value
-
-        longformer_self_attn.query_global = copy.deepcopy(layer.attention.self.query)
-        longformer_self_attn.key_global = copy.deepcopy(layer.attention.self.key)
-        longformer_self_attn.value_global = copy.deepcopy(layer.attention.self.value)
-
-        layer.attention.self = longformer_self_attn
-    
-    if not os.path.exists(save_model_to):
-        os.makedirs(save_model_to)
-    
-    model.save_pretrained(save_model_to)
-    tokenizer.save_pretrained(save_model_to)
-    return model, tokenizer
-
 def create_bigbird(model : str, save_model_to : str, attention_window : int, max_pos : int ) -> Callable :
     pass
 
@@ -171,7 +120,7 @@ def create_bigbird(model : str, save_model_to : str, attention_window : int, max
 #    return callable_model
 
 def load_longmodel(embedding_model : str = "") -> Callable:
-    supported_models = { "longformer" : create_longformer, "longformerhf" : create_longformer_hf, "bigbird" : create_bigbird}
+    supported_models = { "longformer" : create_longformer, "bigbird" : create_bigbird}
     longmodel_path = f'{os. getcwd()}\\keybert\\backend\\long_models\\'
     sliced_t = embedding_model[:embedding_model.index('-')]
 
@@ -188,7 +137,7 @@ def load_longmodel(embedding_model : str = "") -> Callable:
     attention_window = 512
     max_pos = 4096
 
-    if not os.path.exists(model_path) and os.listdir(model_path):
+    if not os.path.exists(model_path):
         supported_models[sliced_t](sliced_m, model_path, attention_window, max_pos)
 
     callable_model = select_backend(sliced_m)
@@ -198,11 +147,5 @@ def load_longmodel(embedding_model : str = "") -> Callable:
         callable_model.embedding_model.tokenizer = XLMRobertaTokenizer.from_pretrained(model_path, output_loading_info = False,  output_hidden_states = True, output_attentions=True)
         callable_model.embedding_model.tokenizer.save_pretrained(model_path)
         callable_model.embedding_model._modules['0']._modules['auto_model'].config = XLMRobertaConfig.from_pretrained(model_path, output_loading_info = False,  output_hidden_states = True, output_attentions=True)
-
-    elif sliced_t == "longformerhf":
-        callable_model.embedding_model._modules['0']._modules['auto_model'] = LongformerModel.from_pretrained(model_path, output_hidden_states = True, output_attentions=True)
-        callable_model.embedding_model.tokenizer = LongformerTokenizerFast.from_pretrained(f'sentence-transformers/{sliced_m}')
-        callable_model.embedding_model.tokenizer.save_pretrained(model_path)
-        callable_model.embedding_model._modules['0']._modules['auto_model'].config = LongformerConfig().from_pretrained(model_path, output_hidden_states = True, output_attentions=True)
 
     return callable_model
