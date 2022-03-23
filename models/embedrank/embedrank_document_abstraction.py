@@ -11,8 +11,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from typing import List, Tuple, Set, Callable
 
 from keybert.mmr import mmr
-from models.pre_processing.pre_processing_utils import tokenize
-from models.pre_processing.post_processing_utils import embed_hf, embed_hf_global_att, whitening_np, z_score_normalization, l1_l12_embed, tokenize_attention_embed
+from models.pre_processing.pre_processing_utils import tokenize_hf, filter_ids
+from models.pre_processing.post_processing_utils import embed_hf, z_score_normalization, mean_pooling
 
 from utils.IO import read_from_file
 
@@ -46,6 +46,11 @@ class Document:
         self.doc_sents = []
         self.id = id
 
+        # Tokenized document
+        self.token_ids = []
+        self.token_embeddings = []
+        self.attention_mask = []
+
     def pos_tag(self, tagger, memory, id):
         """
         Method that handles POS_tagging of an entire document, whilst storing it seperated by sentences
@@ -68,11 +73,13 @@ class Document:
         Method that embeds the document, having several modes according to usage.
             The default value just embeds the document normally.
         """
-        
-        if "global_attention" in post_processing:
-            return embed_hf(self.raw_text, model)[0]
 
-        return model.embed(self.raw_text)
+        doc_info = model.embed_full(self.raw_text)
+        self.doc_token_ids = doc_info["input_ids"].squeeze().tolist()
+        self.doc_token_embeddings = doc_info["token_embeddings"]
+        self.doc_attention_mask = doc_info["attention_mask"]
+
+        return doc_info["sentence_embedding"].detach().numpy()
 
     def embed_candidates(self, model, stemmer : Callable = None, cand_mode: str = "", post_processing : List[str] = []):
         """
@@ -83,11 +90,24 @@ class Document:
 
         #line_sum = [torch.sum(head, dim=0).tolist() for head in self.attention_matrix]
         #line_attention = list(map(sum, zip(*line_sum)))
-        
+
         for candidate in self.candidate_set:
-            if cand_mode == "AvgContext":
-                embed = model.embed([stemmer.stem(word) for word in candidate.split(" ")] if stemmer else candidate.split(" "))
-                self.candidate_set_embed.append(np.mean(embed, axis=0))
+            tokenized_candidate = tokenize_hf(candidate, model)
+            token_ids = tokenized_candidate['input_ids']
+            filt_ids = filter_ids(token_ids)
+            att_mask = tokenized_candidate['attention_mask']
+            
+            candidate_embeds = []
+            cand_len = len(filt_ids)
+
+            for i in range(len(self.doc_token_ids)):
+                if filt_ids[0] == self.doc_token_ids[i] and filt_ids == self.doc_token_ids[i:i+cand_len]:
+                    candidate_embeds.append(mean_pooling(self.doc_token_embeddings[i:i+cand_len].unsqueeze(0), self.doc_attention_mask[i:i+cand_len]).detach().numpy()[0])
+
+            if candidate_embeds == []:
+                self.candidate_set_embed.append(model.embed(stemmer.stem(candidate) if stemmer else candidate))
+            else:
+                self.candidate_set_embed.append(np.mean(candidate_embeds, 0))
 
             #elif "attention" in post_processing:
             #    cand_id_tokens, cand_tokens = tokenize(candidate, model)
@@ -112,11 +132,11 @@ class Document:
             #    cand_embed = np.mean(cand_embed, axis = 0)
             #    self.candidate_set_embed.append(cand_embed)
 
-            elif "global_attention" in post_processing:
-                self.candidate_set_embed.append(embed_hf(candidate, model)[0])
-
-            else:
-                self.candidate_set_embed.append(model.embed(stemmer.stem(candidate) if stemmer else candidate))
+            #if "global_attention" in post_processing:
+            #    self.candidate_set_embed.append(embed_hf(candidate, model)[0])
+            #
+            #else:
+            #    self.candidate_set_embed.append(model.embed(stemmer.stem(candidate) if stemmer else candidate))
 
         if "z_score" in post_processing:
             self.candidate_set_embed = z_score_normalization(self.candidate_set_embed, self.raw_text, model)

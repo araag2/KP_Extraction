@@ -52,3 +52,7 @@ class SentenceTransformerBackend(BaseEmbedder):
         """
         embeddings = self.embedding_model.encode(documents, show_progress_bar=verbose)
         return embeddings
+
+    def embed_full(self, 
+                   documents: List[str]) -> dict:
+        return self.embedding_model.encode(documents, show_progress_bar=False, output_value = None)

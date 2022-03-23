@@ -6,6 +6,7 @@ import torch
 import gc
 import random
 
+from models.pre_processing.pre_processing_utils import tokenize_hf
 from typing import Callable, List, Tuple
 
 def z_score_normalization(candidate_set_embeded : List[List[float]], raw_document : str, model : Callable) -> List[List[float]] :
@@ -53,35 +54,25 @@ def l1_l12_embed(text : str, model: Callable) -> Tuple:
 
 ##############################################################
 
-def mean_pooling(model_output, attention_mask):
-    token_embeddings = model_output[0] 
+def mean_pooling(token_embeddings, attention_mask):
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
-def max_pooling(model_output, attention_mask):
-    token_embeddings = model_output[0] #First element of model_output contains all token embeddings
+def max_pooling(token_embeddings, attention_mask):
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
     token_embeddings[input_mask_expanded == 0] = -1e9  # Set padding tokens to large negative value
     return torch.max(token_embeddings, 1)[0]
 
-def tokenize_attention_embed(text : str, model: Callable) -> Tuple:
-    inputs = model.embedding_model.tokenizer(text, return_tensors="pt", max_length = 2048)
-    outputs = model.embedding_model._modules['0']._modules['auto_model'](**inputs)
-    
-    tokens = inputs.input_ids.squeeze().tolist()
-    last_layer_attention = outputs.attentions[-1][0]
-    return (tokens, last_layer_attention)    
-
 def embed_hf(text: str, model: Callable) -> Tuple:
     # Tokenize sentences
-    inputs = model.embedding_model.tokenizer(text, padding=True, truncation=True, return_tensors='pt')
+    inputs = tokenize_hf(text, model)
 
     with torch.no_grad():
         # Compute token embeddings
         outputs = model.embedding_model._modules['0']._modules['auto_model'](**inputs)
 
     # Perform pooling. In this case, mean pooling.
-    embed = mean_pooling(outputs, inputs['attention_mask'])
+    embed = mean_pooling(outputs[0], inputs['attention_mask'])
     return embed.detach().numpy()
 
 def embed_hf_global_att(text: str, model: Callable) -> Tuple:
@@ -101,5 +92,5 @@ def embed_hf_global_att(text: str, model: Callable) -> Tuple:
     outputs = model.embedding_model._modules['0']._modules['auto_model'](**inputs, global_attention_mask = global_att)
 
     # Perform pooling. In this case, max pooling.    
-    embed = mean_pooling(outputs, inputs['attention_mask'])
+    embed = mean_pooling(outputs[0], inputs['attention_mask'])
     return embed.detach().numpy()

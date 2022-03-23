@@ -147,7 +147,7 @@ use_memory = True
 stemming = False
 lemmatize = False
 
-#run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize,  post_processing = ["global_attention"])
+run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize,  post_processing = ["global_attention"])
 #run_fusion_model(["NUS"], embeds_model, choose_tagger("NUS"), [EmbedRank, MaskRank], pos_tags_f, embeds_f, doc_cand_modes, "harmonic", use_memory, stemming, lemmatize,  post_processing = ["attention"])
 
 #model = EmbedRank(f'{embeds_model}', "en_core_web_trf")

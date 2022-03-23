@@ -33,11 +33,25 @@ def remove_stopwords(text : str = "") -> str:
             res += " {}".format(word)
     return res[1:]
 
+def filter_ids(input_ids: List[List[int]]) -> List[int]:
+    return [i for i in input_ids.squeeze().tolist() if i not in special_ids]
+
 def tokenize(text : str, model: Callable) -> Tuple:
     tokenized = model.embedding_model.tokenizer(text, return_tensors="pt", return_attention_mask=True)
     tokens = [i for i in tokenized.input_ids.squeeze().tolist() if i not in special_ids]
 
     return tokens, [model.embedding_model.tokenizer.decode(t) for t in tokens]
+
+def tokenize_hf(text:str, model: Callable) -> List:
+    return model.embedding_model.tokenizer(text, padding=True, truncation=True, return_tensors='pt')
+
+def tokenize_attention_embed(text : str, model: Callable) -> Tuple:
+    inputs = model.embedding_model.tokenizer(text, return_tensors="pt", max_length = 2048)
+    outputs = model.embedding_model._modules['0']._modules['auto_model'](**inputs)
+    
+    tokens = inputs.input_ids.squeeze().tolist()
+    last_layer_attention = outputs.attentions[-1][0]
+    return (tokens, last_layer_attention)    
 
 def sentence_transformer_tokenize(text: str) -> List[int]:
         tokens = text.split()
