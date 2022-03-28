@@ -71,10 +71,11 @@ class Document:
     def embed_doc(self, model, stemmer : Callable = None, doc_mode: str = "", post_processing : List[str] = []):
         """
         Method that embeds the document, having several modes according to usage.
-            The default value just embeds the document normally.
+        The default value just embeds the document normally.
         """
 
-        doc_info = model.embed_full(self.raw_text)
+        doc_info = model.embed_full(self.raw_text) # encode(documents, show_progress_bar=False, output_value = None)
+
         self.doc_token_ids = doc_info["input_ids"].squeeze().tolist()
         self.doc_token_embeddings = doc_info["token_embeddings"]
         self.doc_attention_mask = doc_info["attention_mask"]
@@ -93,19 +94,19 @@ class Document:
 
         for candidate in self.candidate_set:
             tokenized_candidate = tokenize_hf(candidate, model)
-            token_ids = tokenized_candidate['input_ids']
-            filt_ids = filter_ids(token_ids)
-            att_mask = tokenized_candidate['attention_mask']
+            filt_ids = filter_ids(tokenized_candidate['input_ids'])
             
             candidate_embeds = []
             cand_len = len(filt_ids)
 
-            for i in range(len(self.doc_token_ids)):
-                if filt_ids[0] == self.doc_token_ids[i] and filt_ids == self.doc_token_ids[i:i+cand_len]:
-                    candidate_embeds.append(mean_pooling(self.doc_token_embeddings[i:i+cand_len].unsqueeze(0), self.doc_attention_mask[i:i+cand_len]).detach().numpy()[0])
+            #for i in range(len(self.doc_token_ids)):
+                #if filt_ids[0] == self.doc_token_ids[i] and filt_ids == self.doc_token_ids[i:i+cand_len]:
+                    #candidate_embeds.append(mean_pooling(self.doc_token_embeddings[i:i+cand_len].unsqueeze(0), self.doc_attention_mask[i:i+cand_len]).detach().numpy()[0])
+                    #candidate_embeds.append(np.mean(self.doc_token_embeddings[i:i+cand_len].detach().numpy(), 0))
 
             if candidate_embeds == []:
                 self.candidate_set_embed.append(model.embed(stemmer.stem(candidate) if stemmer else candidate))
+
             else:
                 self.candidate_set_embed.append(np.mean(candidate_embeds, 0))
 

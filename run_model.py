@@ -147,7 +147,7 @@ use_memory = True
 stemming = False
 lemmatize = False
 
-run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize,  post_processing = ["global_attention"])
+run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize)
 #run_fusion_model(["NUS"], embeds_model, choose_tagger("NUS"), [EmbedRank, MaskRank], pos_tags_f, embeds_f, doc_cand_modes, "harmonic", use_memory, stemming, lemmatize,  post_processing = ["attention"])
 
 #model = EmbedRank(f'{embeds_model}', "en_core_web_trf")
@@ -155,23 +155,25 @@ run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tag
 #references = "C:\\Users\\artur\\Desktop\\wikipedia\\WikipediaEpidemics-dataset\\references"
 #kp = {}
 #
-#with open(f'{references}\\test.json', 'r') as s_json:
+#lang = simplemma.load_data("en")
+#
+#with open(f'{references}\\test-lem.json', 'r') as s_json:
 #    kp = json.load(s_json)
 #    for f in os.listdir(dir):
 #        if f not in kp:
 #            with open(f'{dir}\\{f}', 'r', encoding='utf-8') as file:
 #                txt = file.read()
-#                doc_kp = [k.lower() for k in model.extract_kp_from_doc(txt, 30, 5)[1] if len(k.split(" ")) <=6 and not any(x in k for x in "{<>=\"=}|+:[].")]
-#                doc_kp = list(dict.fromkeys(doc_kp))[:50]
+#                doc_kp = [simplemma.lemmatize(k, lang) for k in model.extract_kp_from_doc(txt, 30, 5)[1] if len(k.split(" ")) <=6 and not any(x in k for x in "{<>=\"=}|&;+:[].")]
+#                doc_kp = list(set(doc_kp))[:50]
 #                kp[f] = doc_kp
 #
 #                print(f)
 #                print(doc_kp)
 #
-#                with open(f'{references}\\test-temp.json', "w") as temp_json:
+#                with open(f'{references}\\test-lem-temp.json', "w") as temp_json:
 #                    json.dump(kp, temp_json, indent=4, separators=(',', ': '))
 #
-#with open(f'{references}\\test-temp.json', "r") as source, open(f'{references}\\test.json', "w") as dest:
+#with open(f'{references}\\test-lem-temp.json', "r") as source, open(f'{references}\\test-lem.json', "w") as dest:
 #    json.dump(json.load(source), dest, indent=4, separators=(',', ': '))
 #
 #print(kp)
