@@ -9,7 +9,7 @@ from typing import List, Callable
 from nltk.stem import PorterStemmer
 
 from models.pre_processing.dataset_embeddings_memory import EmbeddingsMemory
-from models.pre_processing.language_mapping import choose_tagger
+from models.pre_processing.language_mapping import choose_tagger, choose_lemmatizer
 from models.pre_processing.pos_tagging import POS_tagger_spacy
 
 from models.fusion_model import FusionModel
@@ -79,8 +79,9 @@ def run_single_model(datasets : List[str],
                 res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, stemming, lemmatize, \
                 doc_mode = d_mode, cand_mode = c_mode, **kwargs)
 
-
-        evaluate_kp_extraction(extract_res_labels(res, PorterStemmer()), extract_dataset_labels(dataset_obj.dataset_content, PorterStemmer(), None), \
+        stemmer = PorterStemmer() if stemming else None
+        lemmer = choose_lemmatizer(dataset) if lemmatize else None
+        evaluate_kp_extraction(extract_res_labels(res, stemmer, lemmer), extract_dataset_labels(dataset_obj.dataset_content, stemmer, lemmer), \
         model.name, True, True)
 
     return
@@ -114,7 +115,7 @@ def run_fusion_model(datasets : List[str],
 
                 print(embed_memory_dir)
 
-                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][:50], dataset, 15, 5, stemming, lemmatize,\
+                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, stemming, lemmatize,\
                 doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir, **kwargs)
         
             else: 
@@ -145,7 +146,7 @@ pos_tags_f = False
 embeds_f = False
 use_memory = True
 stemming = False
-lemmatize = False
+lemmatize = True
 
 run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize)
 #run_fusion_model(["NUS"], embeds_model, choose_tagger("NUS"), [EmbedRank, MaskRank], pos_tags_f, embeds_f, doc_cand_modes, "harmonic", use_memory, stemming, lemmatize,  post_processing = ["attention"])

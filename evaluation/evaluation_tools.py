@@ -1,13 +1,14 @@
 from os import write
 from typing import List, Dict, Tuple, Callable
 import numpy as np
+import simplemma
 
 from nltk.stem import PorterStemmer
 from time import gmtime, strftime
 from evaluation.config import RESULT_DIR
 from utils.IO import write_to_file
 
-def extract_res_labels(model_results, stemmer: Callable = None):
+def extract_res_labels(model_results, stemmer: Callable = None, lemmer: Callable = None):
     """
     Code snippet to correctly model results
     """
@@ -15,7 +16,10 @@ def extract_res_labels(model_results, stemmer: Callable = None):
     for dataset in model_results:        
         res[dataset] = []
         for doc in model_results[dataset]:
-            res[dataset].append( ([stemmer.stem(kp[0]) for kp in doc[0]], [stemmer.stem(kp) for kp in doc[1]])) 
+            if lemmer:
+                res[dataset].append( ([simplemma.lemmatize(kp[0], lemmer) for kp in doc[0]], [simplemma.lemmatize(kp, lemmer) for kp in doc[1]])) 
+            elif stemmer:
+                res[dataset].append( ([stemmer.stem(kp[0]) for kp in doc[0]], [stemmer.stem(kp) for kp in doc[1]])) 
     return res
 
 def extract_dataset_labels(corpus_true_labels, stemmer: Callable = None, lemmer: Callable = None):
@@ -28,8 +32,10 @@ def extract_dataset_labels(corpus_true_labels, stemmer: Callable = None, lemmer:
         for i in range(len(corpus_true_labels[dataset])):
             doc_results = []
             for kp in corpus_true_labels[dataset][i][1]:
-                kp = stemmer.stem(kp) if stemmer else kp
-                kp = lemmer.lematize(kp) if lemmer else kp
+                if lemmer:
+                    simplemma.lemmatize(kp, lemmer)
+                elif stemmer:
+                    kp = stemmer.stem(kp)
                 doc_results.append(kp)
             res[dataset].append(doc_results)
     return res

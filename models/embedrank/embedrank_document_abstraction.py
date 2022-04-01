@@ -93,20 +93,21 @@ class Document:
         #line_attention = list(map(sum, zip(*line_sum)))
 
         for candidate in self.candidate_set:
-            tokenized_candidate = tokenize_hf(candidate, model)
-            filt_ids = filter_ids(tokenized_candidate['input_ids'])
-            
             candidate_embeds = []
-            cand_len = len(filt_ids)
 
-            #for i in range(len(self.doc_token_ids)):
-                #if filt_ids[0] == self.doc_token_ids[i] and filt_ids == self.doc_token_ids[i:i+cand_len]:
-                    #candidate_embeds.append(mean_pooling(self.doc_token_embeddings[i:i+cand_len].unsqueeze(0), self.doc_attention_mask[i:i+cand_len]).detach().numpy()[0])
-                    #candidate_embeds.append(np.mean(self.doc_token_embeddings[i:i+cand_len].detach().numpy(), 0))
+            for mention in self.candidate_mentions[candidate]:
+                tokenized_candidate = tokenize_hf(candidate, model)
+                filt_ids = filter_ids(tokenized_candidate['input_ids'])
+                
+                cand_len = len(filt_ids)
+
+                for i in range(len(self.doc_token_ids)):
+                    if filt_ids[0] == self.doc_token_ids[i] and filt_ids == self.doc_token_ids[i:i+cand_len]:
+                        candidate_embeds.append(mean_pooling(self.doc_token_embeddings[i:i+cand_len].unsqueeze(0), self.doc_attention_mask[i:i+cand_len]).detach().numpy()[0])
+                        candidate_embeds.append(np.mean(self.doc_token_embeddings[i:i+cand_len].detach().numpy(), 0))
 
             if candidate_embeds == []:
-                self.candidate_set_embed.append(model.embed(stemmer.stem(candidate) if stemmer else candidate))
-
+                self.candidate_set_embed.append(model.embed(candidate))
             else:
                 self.candidate_set_embed.append(np.mean(candidate_embeds, 0))
 
@@ -148,8 +149,8 @@ class Document:
         Method that uses Regex patterns on POS tags to extract unique candidates from a tagged document and 
         stores the sentences each candidate occurs in
         """
-        #candidate_sents = {}
         self.candidate_set = set()
+        self.candidate_mentions = {}
 
         parser = RegexpParser(grammar)
         np_trees = list(parser.parse_sents(self.tagged_text))
@@ -166,13 +167,11 @@ class Document:
                     if l_candidate not in self.candidate_set:
                         self.candidate_set.add(l_candidate)
 
-                    #if l_candidate not in candidate_sents:
-                    #    candidate_sents[l_candidate] = [(i,candidate.split(" "))]
-                    #else:
-                    #    candidate_sents[l_candidate].append((i, candidate.split(" ")))
+                    if l_candidate not in self.candidate_mentions:
+                        self.candidate_mentions[l_candidate] = []
+                    self.candidate_mentions[l_candidate].append(candidate)
 
         self.candidate_set = sorted(list(self.candidate_set), key=len, reverse=True)
-        #self.candidate_sents = candidate_sents
 
     def top_n_candidates(self, model, top_n: int = 5, min_len : int = 5, stemmer : Callable = None, **kwargs) -> List[Tuple]:
        
@@ -206,4 +205,5 @@ class Document:
         if top_n == -1:
             return candidate_score, [candidate[0] for candidate in candidate_score]
 
+        #print(candidate_score[:top_n])
         return candidate_score[:top_n], [candidate[0] for candidate in candidate_score]

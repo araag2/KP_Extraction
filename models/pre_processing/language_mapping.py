@@ -27,5 +27,5 @@ lemmatizers = { "DUC"      : "en",
 def choose_tagger(model : str = "") -> POS_tagger_spacy:
     return pos_taggers[model]
 
-def choose_lemmatizer(model : str = ""):
-    return simplemma.load_data(lemmatizers[model])
+def choose_lemmatizer(dataset : str = ""):
+    return simplemma.load_data(lemmatizers[dataset])
