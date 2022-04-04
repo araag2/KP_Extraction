@@ -2,12 +2,18 @@ import json
 from mordecai import Geoparser
 
 def process_MKDUC01():
-    parser = Geoparser()
+	parser = Geoparser()
 
-    with open('..\\raw_data\\MKDUC-01\\MKDUC01.json', 'r') as s_json:
-        docs = json.load(s_json)
+	with open('/home/aguimaraes/Thesis/KP_Extraction/datasets/raw_data/MKDUC-01/MKDUC01.json', 'r') as s_json:
+		docs = json.load(s_json)
+		res = {}
 
-        print(docs)
+		for doc_group in docs:
+			res[doc_group] = {}
+			for doc in docs[doc_group]["documents"]:
+				res[doc_group][doc] = str(parser.geoparse(docs[doc_group]["documents"][doc]))
 
-        with open('..\\raw_data\\MKDUC-01\\MKDUC01-Mordecai.json', 'w') as d_json:
-            json.dump(docs, d_json, indent=4, separators=(',', ': '))
+	with open('/home/aguimaraes/Thesis/KP_Extraction/datasets/raw_data/MKDUC-01/MKDUC01-mordecai.json', 'w') as d_json:
+		json.dump(res, d_json, indent=4, separators=(',', ': '))
+
+process_MKDUC01()
