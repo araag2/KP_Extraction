@@ -63,7 +63,7 @@ class Document:
         if cand_mode == "MaskFirst" or cand_mode == "MaskAll":
             occurences = 1 if cand_mode == "MaskFirst" else 0
 
-            escaped_docs = [re.sub(re.escape(candidate), "[MASK]", self.raw_text, occurences) for candidate in self.candidate_set]
+            escaped_docs = [re.sub(re.escape(candidate), "<mask>", self.raw_text, occurences) for candidate in self.candidate_set]
             self.candidate_set_embed = model.embed(escaped_docs)
 
         elif cand_mode == "MaskHighest":
@@ -72,7 +72,7 @@ class Document:
                 candidate_embeds = []
 
                 for match in re.finditer(candidate, self.raw_text):
-                    masked_text = f'{self.raw_text[:match.span()[0]]}[MASK]{self.raw_text[match.span()[1]:]}'
+                    masked_text = f'{self.raw_text[:match.span()[0]]}<mask>{self.raw_text[match.span()[1]:]}'
                     candidate_embeds.append(model.embed(masked_text))
                 self.candidate_set_embed.append(candidate_embeds)
 
@@ -107,7 +107,7 @@ class Document:
 
                 masked_doc = self.raw_text
                 for i in range(len(subset_pos)):
-                    masked_doc = f'{masked_doc[:(subset_pos[i][0] + i*(len_candidate - 5))]}[MASK]{masked_doc[subset_pos[i][1] + i*(len_candidate - 5):]}'
+                    masked_doc = f'{masked_doc[:(subset_pos[i][0] + i*(len_candidate - 5))]}<mask>{masked_doc[subset_pos[i][1] + i*(len_candidate - 5):]}'
                 self.candidate_set_embed.append(model.embed(masked_doc))
                 
     def extract_candidates(self, min_len : int = 5, grammar : str = "", lemmer : Callable = None):

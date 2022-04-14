@@ -53,6 +53,24 @@ class EmbedRank(BaseKPModel):
 
         return (top_n, candidate_set)
 
+    def extract_kp_from_doc_old(self, doc, top_n, min_len, stemmer = None, lemmer = None, **kwargs) -> Tuple[List[Tuple], List[str]]:
+        """
+        Concrete method that extracts key-phrases from a given document, with optional arguments
+        relevant to its specific functionality
+        """
+
+        doc = Document_old(doc, self.counter)
+        doc.pos_tag(self.tagger, False if "pos_tag_memory" not in kwargs else kwargs["pos_tag_memory"], self.counter)
+        doc.extract_candidates(min_len, self.grammar, lemmer)
+        
+        top_n, candidate_set = doc.top_n_candidates(self.model, top_n, min_len, stemmer, **kwargs)
+
+        print(f'document {self.counter} processed\n')
+        self.counter += 1
+        torch.cuda.empty_cache()
+
+        return (top_n, candidate_set)
+
     def extract_kp_from_corpus(self, corpus, dataset: str = "DUC", 
     top_n: int = 15, min_len: int = 5, stemming: bool = False, lemmatize: bool = False, **kwargs) -> List[List[Tuple]]:
         """
@@ -62,7 +80,10 @@ class EmbedRank(BaseKPModel):
         self.counter = 0
         self.update_tagger(dataset)
 
-        stemer = None if not stemming else PorterStemmer()
-        lemmer = None if not lemmatize else choose_lemmatizer(dataset)
+        stemmer = PorterStemmer() if stemming else None
+        lemmer = choose_lemmatizer(dataset) if lemmatize else None
 
-        return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemer, lemmer, **kwargs) for doc in corpus]
+        print(f'Document embeddings equality: {True}')
+        print(f'Candidate set equality: {True}')
+
+        return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemmer, lemmer, **kwargs) for doc in corpus]

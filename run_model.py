@@ -72,14 +72,14 @@ def run_single_model(datasets : List[str],
                 pos_tag_memory_dir = f'{POS_TAG_DIR}{dataset}/{pos_tagger_model}/'
                 embed_memory_dir = f'{EMBEDS_DIR}{dataset}/{embeds_model}/'
 
-                res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, stemming, lemmatize,\
+                res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][0:5], dataset, 15, 5, stemming, lemmatize,\
                 doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir, **kwargs)
         
             else: 
                 res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, stemming, lemmatize, \
                 doc_mode = d_mode, cand_mode = c_mode, **kwargs)
 
-        stemmer = PorterStemmer() if stemming else None
+        stemmer = PorterStemmer() 
         lemmer = choose_lemmatizer(dataset) if lemmatize else None
         evaluate_kp_extraction(extract_res_labels(res, stemmer, lemmer), extract_dataset_labels(dataset_obj.dataset_content, stemmer, lemmer), \
         model.name, True, True)
@@ -146,9 +146,9 @@ pos_tags_f = False
 embeds_f = False
 use_memory = True
 stemming = False
-lemmatize = True
+lemmatize = False
 
-run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize)
+run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), MaskRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize)
 #run_fusion_model(["NUS"], embeds_model, choose_tagger("NUS"), [EmbedRank, MaskRank], pos_tags_f, embeds_f, doc_cand_modes, "harmonic", use_memory, stemming, lemmatize,  post_processing = ["attention"])
 
 #model = EmbedRank(f'{embeds_model}', "en_core_web_trf")

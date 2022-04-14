@@ -88,6 +88,7 @@ class Document:
             The default value just embeds candidates directly.
         """
         self.candidate_set_embed = []
+        self.cand_not_found = []
 
         #line_sum = [torch.sum(head, dim=0).tolist() for head in self.attention_matrix]
         #line_attention = list(map(sum, zip(*line_sum)))
@@ -103,46 +104,38 @@ class Document:
 
                 for i in range(len(self.doc_token_ids)):
                     if filt_ids[0] == self.doc_token_ids[i] and filt_ids == self.doc_token_ids[i:i+cand_len]:
-                        candidate_embeds.append(mean_pooling(self.doc_token_embeddings[i:i+cand_len].unsqueeze(0), self.doc_attention_mask[i:i+cand_len]).detach().numpy()[0])
+                        #candidate_embeds.append(mean_pooling(self.doc_token_embeddings[i:i+cand_len].unsqueeze(0), self.doc_attention_mask[i:i+cand_len]).detach().numpy()[0])
                         candidate_embeds.append(np.mean(self.doc_token_embeddings[i:i+cand_len].detach().numpy(), 0))
 
             if candidate_embeds == []:
+                self.cand_not_found.append(candidate)
                 self.candidate_set_embed.append(model.embed(candidate))
+            #candidate_embeds.append(model.embed(candidate))
+
             else:
                 self.candidate_set_embed.append(np.mean(candidate_embeds, 0))
-
-            #elif "attention" in post_processing:
-            #    cand_id_tokens, cand_tokens = tokenize(candidate, model)
-            #
-            #    if len(cand_tokens) == 0:
-            #        self.candidate_set_embed.append(model.embed(stemmer.stem(candidate) if stemmer else candidate))
-            #        continue
-            #
-            #    possible_pos = sorted([i for i, e in enumerate(self.doc_word_tokens) if e == cand_id_tokens[0]])
-            #    cand_embed = []
-            #    embed = model.embed(cand_tokens)
-            #
-            #    for i in possible_pos:
-            #        if cand_id_tokens == self.doc_word_tokens[i:i+len(cand_id_tokens)]:        
-            #
-            #            for j in range(len(embed)):
-            #                cand_embed.append(embed[j] * line_attention[i+j])
-            #
-            #    if len(cand_embed) == 0:
-            #        cand_embed = embed
-            #    
-            #    cand_embed = np.mean(cand_embed, axis = 0)
-            #    self.candidate_set_embed.append(cand_embed)
-
-            #if "global_attention" in post_processing:
-            #    self.candidate_set_embed.append(embed_hf(candidate, model)[0])
-            #
-            #else:
-            #    self.candidate_set_embed.append(model.embed(stemmer.stem(candidate) if stemmer else candidate))
+            #self.candidate_set_embed.append(model.embed(candidate))
 
         if "z_score" in post_processing:
             self.candidate_set_embed = z_score_normalization(self.candidate_set_embed, self.raw_text, model)
 
+        #self.cand_not_found_old = []
+        #segmented_doc = self.raw_text.split()
+        #for candidate in self.candidate_set:
+        #    found = False
+        #    s_candidate = candidate.split()
+        #    c_len = len(s_candidate)
+        #
+        #    for i in range(len(segmented_doc)):
+        #        if segmented_doc[i] == s_candidate[0] and s_candidate == segmented_doc[i:i+c_len]:
+        #            found = True
+        #            break
+        #
+        #    if not found:
+        #        self.cand_not_found_old.append(candidate)
+        #
+        #print(f'Candidates not found current method = {self.cand_not_found}')
+        #print(f'Candidates not found old method = {self.cand_not_found_old}')
 
     def extract_candidates(self, min_len : int = 5, grammar : str = "", lemmer : Callable = None):
         """
@@ -166,9 +159,10 @@ class Document:
                     l_candidate = simplemma.lemmatize(candidate, lemmer) if lemmer else candidate
                     if l_candidate not in self.candidate_set:
                         self.candidate_set.add(l_candidate)
-
+    
                     if l_candidate not in self.candidate_mentions:
                         self.candidate_mentions[l_candidate] = []
+
                     self.candidate_mentions[l_candidate].append(candidate)
 
         self.candidate_set = sorted(list(self.candidate_set), key=len, reverse=True)
@@ -205,5 +199,4 @@ class Document:
         if top_n == -1:
             return candidate_score, [candidate[0] for candidate in candidate_score]
 
-        #print(candidate_score[:top_n])
         return candidate_score[:top_n], [candidate[0] for candidate in candidate_score]

@@ -16,10 +16,8 @@ def extract_res_labels(model_results, stemmer: Callable = None, lemmer: Callable
     for dataset in model_results:        
         res[dataset] = []
         for doc in model_results[dataset]:
-            if lemmer:
-                res[dataset].append( ([simplemma.lemmatize(kp[0], lemmer) for kp in doc[0]], [simplemma.lemmatize(kp, lemmer) for kp in doc[1]])) 
-            elif stemmer:
-                res[dataset].append( ([stemmer.stem(kp[0]) for kp in doc[0]], [stemmer.stem(kp) for kp in doc[1]])) 
+            if stemmer:
+                res[dataset].append(([stemmer.stem(kp[0]) for kp in doc[0]], [stemmer.stem(kp) for kp in doc[1]]))
     return res
 
 def extract_dataset_labels(corpus_true_labels, stemmer: Callable = None, lemmer: Callable = None):
@@ -33,8 +31,8 @@ def extract_dataset_labels(corpus_true_labels, stemmer: Callable = None, lemmer:
             doc_results = []
             for kp in corpus_true_labels[dataset][i][1]:
                 if lemmer:
-                    simplemma.lemmatize(kp, lemmer)
-                elif stemmer:
+                    kp = simplemma.lemmatize(kp, lemmer)
+                if stemmer:
                     kp = stemmer.stem(kp)
                 doc_results.append(kp)
             res[dataset].append(doc_results)
