@@ -88,7 +88,7 @@ class Document:
             The default value just embeds candidates directly.
         """
         self.candidate_set_embed = []
-        self.cand_not_found = []
+        self.cand_not_found_embeds = []
 
         #line_sum = [torch.sum(head, dim=0).tolist() for head in self.attention_matrix]
         #line_attention = list(map(sum, zip(*line_sum)))
@@ -107,14 +107,13 @@ class Document:
                         #candidate_embeds.append(mean_pooling(self.doc_token_embeddings[i:i+cand_len].unsqueeze(0), self.doc_attention_mask[i:i+cand_len]).detach().numpy()[0])
                         candidate_embeds.append(np.mean(self.doc_token_embeddings[i:i+cand_len].detach().numpy(), 0))
 
-            if candidate_embeds == []:
-                self.cand_not_found.append(candidate)
+            if candidate_embeds == []:    
                 self.candidate_set_embed.append(model.embed(candidate))
-            #candidate_embeds.append(model.embed(candidate))
-
+            
             else:
                 self.candidate_set_embed.append(np.mean(candidate_embeds, 0))
             #self.candidate_set_embed.append(model.embed(candidate))
+            self.cand_not_found_embeds.append(model.embed(candidate))
 
         if "z_score" in post_processing:
             self.candidate_set_embed = z_score_normalization(self.candidate_set_embed, self.raw_text, model)
@@ -184,16 +183,24 @@ class Document:
         self.embed_candidates(model, stemmer, cand_mode, post_processing)
         print(f'Embed Candidates = {time.time() -  t:.2f}')
 
-
         doc_sim = []
         if "MMR" not in kwargs:
             doc_sim = np.absolute(cosine_similarity(self.candidate_set_embed, self.doc_embed.reshape(1, -1)))
+
+            #TODO: REMOVE
+            doc_sim_old = np.absolute(cosine_similarity(self.cand_not_found_embeds, self.doc_embed.reshape(1, -1)))
         else:
             n = len(self.candidate_set) if len(self.candidate_set) < top_n else top_n
             doc_sim = mmr(self.doc_embed.reshape(1, -1), self.candidate_set_embed, self.candidate_set, n, kwargs["MMR"])
 
         candidate_score = sorted([(self.candidate_set[i], doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
-        
+        #TODO: REMOVE
+        candidate_score_old = sorted([(self.candidate_set[i], doc_sim_old[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
+
+        #TODO: REMOVE
+        print(f'Current Scores: {candidate_score}')
+        print(f'Old Scores: {candidate_score_old}')
+
         self.attention_matrix = None
 
         if top_n == -1:
