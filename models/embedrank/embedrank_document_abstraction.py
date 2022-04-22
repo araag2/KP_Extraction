@@ -74,13 +74,15 @@ class Document:
         The default value just embeds the document normally.
         """
 
-        doc_info = model.embed_full(self.raw_text) # encode(documents, show_progress_bar=False, output_value = None)
+        #self.raw_text = self.raw_text.lower()
+        #doc_info = model.embed_full(self.raw_text) # encode(documents, show_progress_bar=False, output_value = None)
 
-        self.doc_token_ids = doc_info["input_ids"].squeeze().tolist()
-        self.doc_token_embeddings = doc_info["token_embeddings"]
-        self.doc_attention_mask = doc_info["attention_mask"]
+        #self.doc_token_ids = doc_info["input_ids"].squeeze().tolist()
+        #self.doc_token_embeddings = doc_info["token_embeddings"]
+        #self.doc_attention_mask = doc_info["attention_mask"]
 
-        return doc_info["sentence_embedding"].detach().numpy()
+        #return doc_info["sentence_embedding"].detach().numpy()
+        return model.embed(self.raw_text)
 
     def embed_candidates(self, model, stemmer : Callable = None, cand_mode: str = "", post_processing : List[str] = []):
         """
@@ -96,24 +98,26 @@ class Document:
         for candidate in self.candidate_set:
             candidate_embeds = []
 
-            for mention in self.candidate_mentions[candidate]:
-                tokenized_candidate = tokenize_hf(candidate, model)
-                filt_ids = filter_ids(tokenized_candidate['input_ids'])
-                
-                cand_len = len(filt_ids)
-
-                for i in range(len(self.doc_token_ids)):
-                    if filt_ids[0] == self.doc_token_ids[i] and filt_ids == self.doc_token_ids[i:i+cand_len]:
-                        #candidate_embeds.append(mean_pooling(self.doc_token_embeddings[i:i+cand_len].unsqueeze(0), self.doc_attention_mask[i:i+cand_len]).detach().numpy()[0])
-                        candidate_embeds.append(np.mean(self.doc_token_embeddings[i:i+cand_len].detach().numpy(), 0))
-
-            if candidate_embeds == []:    
-                self.candidate_set_embed.append(model.embed(candidate))
+            #for mention in self.candidate_mentions[candidate]:
+            #    tokenized_candidate = tokenize_hf(candidate, model)
+            #    filt_ids = filter_ids(tokenized_candidate['input_ids'])
+            #    
+            #    cand_len = len(filt_ids)
+            #
+            #    for i in range(len(self.doc_token_ids)):
+            #        if filt_ids[0] == self.doc_token_ids[i] and filt_ids == self.doc_token_ids[i:i+cand_len]:
+            #            #candidate_embeds.append(mean_pooling(self.doc_token_embeddings[i:i+cand_len].unsqueeze(0), self.doc_attention_mask[i:i+cand_len]).detach().numpy()[0])
+            #            candidate_embeds.append(np.mean(self.doc_token_embeddings[i:i+cand_len].detach().numpy(), 0))
+            #
+            #if candidate_embeds == []:    
+            #    self.candidate_set_embed.append(model.embed(candidate))
+            #
+            #else:
+            #    self.candidate_set_embed.append(np.mean(candidate_embeds, 0))
             
-            else:
-                self.candidate_set_embed.append(np.mean(candidate_embeds, 0))
-            #self.candidate_set_embed.append(model.embed(candidate))
-            self.cand_not_found_embeds.append(model.embed(candidate))
+            #TODO: Remove
+            self.candidate_set_embed.append(model.embed(candidate))
+            #self.cand_not_found_embeds.append(model.embed(candidate))
 
         if "z_score" in post_processing:
             self.candidate_set_embed = z_score_normalization(self.candidate_set_embed, self.raw_text, model)
@@ -155,7 +159,7 @@ class Document:
             for candidate in temp_cand_set:
                 if len(candidate) >= min_len and len(candidate.split(" ")) <= 5:
                     #candidate = re.sub(r'([a-zA-Z0-9\-]+)-([a-zA-Z0-9\-]+)', r'\1 - \2', candidate)
-                    l_candidate = simplemma.lemmatize(candidate, lemmer) if lemmer else candidate
+                    l_candidate = " ".join([simplemma.lemmatize(word, lemmer) for word in candidate.split()]).lower() if lemmer else candidate
                     if l_candidate not in self.candidate_set:
                         self.candidate_set.add(l_candidate)
     
@@ -188,18 +192,27 @@ class Document:
             doc_sim = np.absolute(cosine_similarity(self.candidate_set_embed, self.doc_embed.reshape(1, -1)))
 
             #TODO: REMOVE
-            doc_sim_old = np.absolute(cosine_similarity(self.cand_not_found_embeds, self.doc_embed.reshape(1, -1)))
+            #doc_sim_old = np.absolute(cosine_similarity(self.cand_not_found_embeds, self.doc_embed.reshape(1, -1)))
         else:
             n = len(self.candidate_set) if len(self.candidate_set) < top_n else top_n
             doc_sim = mmr(self.doc_embed.reshape(1, -1), self.candidate_set_embed, self.candidate_set, n, kwargs["MMR"])
 
         candidate_score = sorted([(self.candidate_set[i], doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
         #TODO: REMOVE
-        candidate_score_old = sorted([(self.candidate_set[i], doc_sim_old[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
+        #candidate_score_old = sorted([(self.candidate_set[i], doc_sim_old[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
 
         #TODO: REMOVE
-        print(f'Current Scores: {candidate_score}')
-        print(f'Old Scores: {candidate_score_old}')
+        #print(f'Current Scores: {candidate_score[:15]}\n')
+        #print(f'Old Scores: {candidate_score_old[:15]}\n')
+
+        #print(f'Differences in scores: {[(x,y) for x,y in zip(sorted(candidate_score, key = lambda x: x[0]), sorted(candidate_score_old, key = lambda x: x[0]))]}' )
+        #
+        #differ_1 = [candidate[0] for candidate in candidate_score[:15]]
+        #differ_2 = [candidate[0] for candidate in candidate_score_old[:15]]
+        #
+        #print(f'Candidates that are not in common:')
+        #print(f'    Candidates that are in current and not in old: {[candidate for candidate in differ_1 if candidate not in differ_2]}\n')
+        #print(f'    Candidates that are in old and not in old: {[candidate for candidate in differ_2 if candidate not in differ_1]}\n')
 
         self.attention_matrix = None
 

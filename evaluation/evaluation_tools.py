@@ -17,7 +17,7 @@ def extract_res_labels(model_results, stemmer: Callable = None, lemmer: Callable
         res[dataset] = []
         for doc in model_results[dataset]:
             if stemmer:
-                res[dataset].append(([stemmer.stem(kp[0]) for kp in doc[0]], [stemmer.stem(kp) for kp in doc[1]]))
+                res[dataset].append(([stemmer.stem(kp[0]).lower() for kp in doc[0]], [stemmer.stem(kp).lower() for kp in doc[1]]))
     return res
 
 def extract_dataset_labels(corpus_true_labels, stemmer: Callable = None, lemmer: Callable = None):
@@ -31,10 +31,10 @@ def extract_dataset_labels(corpus_true_labels, stemmer: Callable = None, lemmer:
             doc_results = []
             for kp in corpus_true_labels[dataset][i][1]:
                 if lemmer:
-                    kp = simplemma.lemmatize(kp, lemmer)
+                    kp = " ".join([simplemma.lemmatize(word, lemmer) for word in kp.split()]).lower()
                 if stemmer:
                     kp = stemmer.stem(kp)
-                doc_results.append(kp)
+                doc_results.append(kp.lower())
             res[dataset].append(doc_results)
     return res
 
@@ -91,7 +91,9 @@ def evaluate_kp_extraction(model_results : Dict[str, List] = {}, true_labels: Di
             for kp in true_label:
                 if kp not in candidates:
                     wrong_results.append(kp)
-            print(f'doc {i} missed kp: {wrong_results}')
+            #print(f'doc {i} missed kp: {wrong_results}')
+            print(f'GT of document {i}: {true_label}')
+
 
             if p != 0 and r != 0:
                 f1 = ( 2.0 * p * r ) / ( p + r)

@@ -147,6 +147,5 @@ def load_longmodel(embedding_model : str = "") -> Callable:
         callable_model.embedding_model.tokenizer = XLMRobertaTokenizer.from_pretrained(model_path, output_loading_info = False,  output_hidden_states = True, output_attentions=True)
         callable_model.embedding_model.tokenizer.save_pretrained(model_path)
         callable_model.embedding_model._modules['0']._modules['auto_model'].config = XLMRobertaConfig.from_pretrained(model_path, output_loading_info = False,  output_hidden_states = True, output_attentions=True)
-        callable_model.embedding_model.max_seq_length = 4096
         
     return callable_model

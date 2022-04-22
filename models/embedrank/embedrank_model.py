@@ -42,6 +42,10 @@ class EmbedRank(BaseKPModel):
         """
 
         doc = Document(doc, self.counter)
+        
+        #TODO: Remove
+        #print(doc.raw_text)
+
         doc.pos_tag(self.tagger, False if "pos_tag_memory" not in kwargs else kwargs["pos_tag_memory"], self.counter)
         doc.extract_candidates(min_len, self.grammar, lemmer)
         
@@ -64,9 +68,5 @@ class EmbedRank(BaseKPModel):
 
         stemmer = PorterStemmer() if stemming else None
         lemmer = choose_lemmatizer(dataset) if lemmatize else None
-
-        #TODO: REMOVE
-        print(f'Document embeddings equality: {True}')
-        print(f'Candidate set equality: {True}')
 
         return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemmer, lemmer, **kwargs) for doc in corpus]
