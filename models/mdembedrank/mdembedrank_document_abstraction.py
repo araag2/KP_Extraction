@@ -51,9 +51,6 @@ class Document:
         self.token_embeddings = []
         self.attention_mask = []
 
-        #TODO: Remove
-        self.similarity_values = {}
-
     def pos_tag(self, tagger, memory, id):
         """
         Method that handles POS_tagging of an entire document, whilst storing it seperated by sentences
@@ -100,29 +97,47 @@ class Document:
         for candidate in self.candidate_set:
             candidate_embeds = []
 
-            for mention in self.candidate_mentions[candidate]:
-                tokenized_candidate = tokenize_hf(candidate, model)
-                filt_ids = filter_ids(tokenized_candidate['input_ids'])
-                
-                cand_len = len(filt_ids)
+            #for mention in self.candidate_mentions[candidate]:
+            #    tokenized_candidate = tokenize_hf(candidate, model)
+            #    filt_ids = filter_ids(tokenized_candidate['input_ids'])
+            #    
+            #    cand_len = len(filt_ids)
+            #
+            #    for i in range(len(self.doc_token_ids)):
+            #        if filt_ids[0] == self.doc_token_ids[i] and filt_ids == self.doc_token_ids[i:i+cand_len]:
+            #            #candidate_embeds.append(mean_pooling(self.doc_token_embeddings[i:i+cand_len].unsqueeze(0), self.doc_attention_mask[i:i+cand_len]).detach().numpy()[0])
+            #            candidate_embeds.append(np.mean(self.doc_token_embeddings[i:i+cand_len].detach().numpy(), 0))
+            #
+            #if candidate_embeds == []:    
+            #    self.candidate_set_embed.append(model.embed(candidate))
+            #
+            #else:
+            #    self.candidate_set_embed.append(np.mean(candidate_embeds, 0))
             
-                for i in range(len(self.doc_token_ids)):
-                    if filt_ids[0] == self.doc_token_ids[i] and filt_ids == self.doc_token_ids[i:i+cand_len]:
-                        #candidate_embeds.append(mean_pooling(self.doc_token_embeddings[i:i+cand_len].unsqueeze(0), self.doc_attention_mask[i:i+cand_len]).detach().numpy()[0])
-                        candidate_embeds.append(np.mean(self.doc_token_embeddings[i:i+cand_len].detach().numpy(), 0))
-            
-            if candidate_embeds == []:    
-                self.candidate_set_embed.append(model.embed(candidate))
-            
-            else:
-                self.candidate_set_embed.append(np.mean(candidate_embeds, 0))
-        
             #TODO: Remove
-            #self.candidate_set_embed.append(model.embed(candidate))
+            self.candidate_set_embed.append(model.embed(candidate))
+            #self.cand_not_found_embeds.append(model.embed(candidate))
 
         if "z_score" in post_processing:
             self.candidate_set_embed = z_score_normalization(self.candidate_set_embed, self.raw_text, model)
 
+        #self.cand_not_found_old = []
+        #segmented_doc = self.raw_text.split()
+        #for candidate in self.candidate_set:
+        #    found = False
+        #    s_candidate = candidate.split()
+        #    c_len = len(s_candidate)
+        #
+        #    for i in range(len(segmented_doc)):
+        #        if segmented_doc[i] == s_candidate[0] and s_candidate == segmented_doc[i:i+c_len]:
+        #            found = True
+        #            break
+        #
+        #    if not found:
+        #        self.cand_not_found_old.append(candidate)
+        #
+        #print(f'Candidates not found current method = {self.cand_not_found}')
+        #print(f'Candidates not found old method = {self.cand_not_found_old}')
 
     def extract_candidates(self, min_len : int = 5, grammar : str = "", lemmer : Callable = None):
         """

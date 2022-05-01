@@ -17,7 +17,8 @@ def extract_res_labels(model_results, stemmer: Callable = None, lemmer: Callable
         res[dataset] = []
         for doc in model_results[dataset]:
             if stemmer:
-                res[dataset].append(([stemmer.stem(kp[0]).lower() for kp in doc[0]], [stemmer.stem(kp).lower() for kp in doc[1]]))
+                res[dataset].append(([" ".join([stemmer.stem(w) for w in simplemma.simple_tokenizer(kp[0])]).lower() for kp in doc[0]], \
+                [" ".join([stemmer.stem(w) for w in simplemma.simple_tokenizer(kp)]).lower() for kp in doc[1]]))
     return res
 
 def extract_dataset_labels(corpus_true_labels, stemmer: Callable = None, lemmer: Callable = None):
@@ -31,9 +32,9 @@ def extract_dataset_labels(corpus_true_labels, stemmer: Callable = None, lemmer:
             doc_results = []
             for kp in corpus_true_labels[dataset][i][1]:
                 if lemmer:
-                    kp = " ".join([simplemma.lemmatize(word, lemmer) for word in kp.split()]).lower()
-                if stemmer:
-                    kp = stemmer.stem(kp)
+                    kp = " ".join([simplemma.lemmatize(w, lemmer) for w in simplemma.simple_tokenizer(kp)]).lower()
+                elif stemmer:
+                    kp = " ".join([stemmer.stem(w) for w in simplemma.simple_tokenizer(kp)]).lower()
                 doc_results.append(kp.lower())
             res[dataset].append(doc_results)
     return res

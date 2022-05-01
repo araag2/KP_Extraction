@@ -35,6 +35,9 @@ class Document:
         self.doc_sents = []
         self.id = id
 
+          #TODO: Remove
+        self.similarity_values = {}
+
     def pos_tag(self, tagger, memory, id):
         """
         Method that handles POS_tagging of an entire document, whilst storing it seperated by sentences
@@ -152,6 +155,13 @@ class Document:
                     doc_sim.append([np.ndarray.min(np.absolute(cosine_similarity(mask_cand_occur, doc_embed)))])
                 else:
                     doc_sim.append([1.0])
+
+        #TODO: Remove
+        for cand in doc_sim:
+            r_sim = str(round(1.01-cand[0], 2))
+            if r_sim not in self.similarity_values:
+                self.similarity_values[r_sim] = 0
+            self.similarity_values[r_sim] += 1
 
         candidate_score = sorted([(self.candidate_set[i], 1.0 - doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
 
