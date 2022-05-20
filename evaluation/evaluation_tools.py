@@ -2,6 +2,7 @@ from os import write
 from typing import List, Dict, Tuple, Callable
 import numpy as np
 import simplemma
+import json
 
 from nltk.stem import PorterStemmer
 from time import gmtime, strftime
@@ -21,6 +22,19 @@ def extract_res_labels(model_results, stemmer: Callable = None, lemmer: Callable
                 [" ".join([stemmer.stem(w) for w in simplemma.simple_tokenizer(kp)]).lower() for kp in doc[1]]))
     return res
 
+def extract_res_labels_x(model_results, stemmer: Callable = None, lemmer: Callable = None):
+    """
+    Code snippet to correctly model results
+    """
+    res = {}
+    for dataset in model_results:        
+        res[dataset] = []
+        for doc in model_results[dataset]:
+            if stemmer:
+                res[dataset].append(([(" ".join([stemmer.stem(w) for w in simplemma.simple_tokenizer(kp[0])]).lower(), kp[1]) for kp in doc[0]], \
+                [" ".join([stemmer.stem(w) for w in simplemma.simple_tokenizer(kp)]).lower() for kp in doc[1]]))
+    return res
+
 def extract_dataset_labels(corpus_true_labels, stemmer: Callable = None, lemmer: Callable = None):
     """
     Code snippet to correctly format dataset true labels
@@ -33,7 +47,7 @@ def extract_dataset_labels(corpus_true_labels, stemmer: Callable = None, lemmer:
             for kp in corpus_true_labels[dataset][i][1]:
                 if lemmer:
                     kp = " ".join([simplemma.lemmatize(w, lemmer) for w in simplemma.simple_tokenizer(kp)]).lower()
-                elif stemmer:
+                if stemmer:
                     kp = " ".join([stemmer.stem(w) for w in simplemma.simple_tokenizer(kp)]).lower()
                 doc_results.append(kp.lower())
             res[dataset].append(doc_results)
@@ -158,3 +172,22 @@ def evaluate_kp_extraction(model_results : Dict[str, List] = {}, true_labels: Di
 
     print(res)
     return
+
+def output_top_cands(model_results : Dict[str, List] = {}, true_labels: Dict[str, Tuple[List]] = {}):
+
+        # TODO: PRINT TO CHECK TOP CANDS PLZ DONT FORGET
+        top_cand_l = []
+        for dataset in model_results:
+            
+            for i in range(len(model_results[dataset])):
+                top_kp = model_results[dataset][i][0]
+                true_label = true_labels[dataset][i]
+                top_cand_l += [round(float(kp[1]),2) for kp in top_kp if kp[0] in true_label]
+
+        top_cand_sims = {round(float(x),2) : (0 + top_cand_l.count(round(float(x),2))) for x in np.arange(0,1.01,0.01)}
+        #print(top_cand_sims)
+        with open(f'C:\\Users\\artur\\Desktop\\stuff\\IST\\Thesis\\Code\\KP_Extraction\\evaluation\\results\\histograms_raw\\{dataset}_EmbedRank_top-cands.json', "w") as out:
+            json.dump(top_cand_sims, out)
+
+        #print(top_cand_l)
+        #print(top_cand_sims)

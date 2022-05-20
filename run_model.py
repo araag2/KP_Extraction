@@ -21,7 +21,7 @@ from models.candidate_extract.candidate_extract_model import CandidateExtract
 from datasets.process_datasets import *
 
 from evaluation.config import POS_TAG_DIR, EMBEDS_DIR
-from evaluation.evaluation_tools import evaluate_kp_extraction, extract_dataset_labels, extract_res_labels
+from evaluation.evaluation_tools import evaluate_kp_extraction, extract_dataset_labels, extract_res_labels, extract_res_labels_x, output_top_cands
 
 
 def save_model_pos_tags(dataset_obj : Callable, pos_tagger_model : str, 
@@ -76,13 +76,15 @@ def run_single_model(datasets : List[str],
                 doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir, **kwargs)
         
             else: 
-                res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, stemming, lemmatize, \
+                res[dataset] = model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][:10], dataset, 15, 5, stemming, lemmatize, \
                 doc_mode = d_mode, cand_mode = c_mode, **kwargs)
 
         stemmer = PorterStemmer() 
         lemmer = choose_lemmatizer(dataset) if lemmatize else None
         evaluate_kp_extraction(extract_res_labels(res, stemmer, lemmer), extract_dataset_labels(dataset_obj.dataset_content, stemmer, lemmer), \
         model.name, True, True)
+        output_top_cands(extract_res_labels_x(res, stemmer, lemmer), extract_dataset_labels(dataset_obj.dataset_content, stemmer, lemmer))
+
 
     return
 
@@ -119,7 +121,7 @@ def run_fusion_model(datasets : List[str],
                 doc_mode = d_mode, cand_mode = c_mode, pos_tag_memory = pos_tag_memory_dir, embed_memory = embed_memory_dir, **kwargs)
         
             else: 
-                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset], dataset, 15, 5, stemming, doc_mode = d_mode, cand_mode = c_mode, **kwargs)
+                res[dataset] = fusion_model.extract_kp_from_corpus(dataset_obj.dataset_content[dataset][:50], dataset, 15, 5, stemming, doc_mode = d_mode, cand_mode = c_mode, **kwargs)
 
         evaluate_kp_extraction(extract_res_labels(res, PorterStemmer()), extract_dataset_labels(dataset_obj.dataset_content, PorterStemmer(), None), \
         fusion_model.name, True, True)
@@ -138,7 +140,8 @@ def run_fusion_model(datasets : List[str],
 #"DE-TeKET"  : {"total" : 10,  "test" : 10},
 
 #"all-mpnet-base-v2", "longformer-paraphrase-multilingual-mpnet-base-v2"
-embeds_model = "longformer-paraphrase-multilingual-mpnet-base-v2"
+#embeds_model = "longformer-paraphrase-multilingual-mpnet-base-v2"
+embeds_model = "longformer-large-4096"
 
 torch.cuda.is_available = lambda : False
 doc_cand_modes = itertools.product([""], [""])
@@ -146,10 +149,10 @@ pos_tags_f = False
 embeds_f = False
 use_memory = False
 stemming = False
-lemmatize = True
+lemmatize = False
 
 run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tags_f, embeds_f, doc_cand_modes, use_memory, stemming, lemmatize)
-#run_fusion_model(["NUS"], embeds_model, choose_tagger("NUS"), [EmbedRank, MaskRank], pos_tags_f, embeds_f, doc_cand_modes, "harmonic", use_memory, stemming, lemmatize,  post_processing = ["attention"])
+#run_fusion_model(["ResisBank"], embeds_model, choose_tagger("ResisBank"), [EmbedRank, MaskRank], pos_tags_f, embeds_f, doc_cand_modes, "harmonic", use_memory, stemming, lemmatize)
 
 #model = EmbedRank(f'{embeds_model}', "en_core_web_trf")
 #dir = "C:\\Users\\artur\\Desktop\\wikipedia\\WikipediaEpidemics-dataset\\wikipedia_articles"
@@ -158,7 +161,7 @@ run_single_model(["DUC"], embeds_model, choose_tagger("DUC"), EmbedRank, pos_tag
 #
 #lang = simplemma.load_data("en")
 #
-#with open(f'{references}\\test-lem.json', 'r') as s_json:
+#with open(f'{references}\\t    est-lem.json', 'r') as s_json:
 #    kp = json.load(s_json)
 #    for f in os.listdir(dir):
 #        if f not in kp:

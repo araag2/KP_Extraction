@@ -25,9 +25,6 @@ class EmbedRank(BaseKPModel):
         {<PROPN|NOUN|ADJ>*<PROPN|NOUN>+<ADJ>*}"""
         self.counter = 0
 
-        #TODO: Remove
-        self.dataset_sim = {}
-
     def update_tagger(self, dataset : str = "") -> None:
         self.tagger = POS_tagger_spacy(choose_tagger(dataset)) if choose_tagger(dataset) != self.tagger.name else self.tagger
 
@@ -58,11 +55,6 @@ class EmbedRank(BaseKPModel):
         self.counter += 1
         torch.cuda.empty_cache()
 
-        for sim in doc.similarity_values:
-            if sim not in self.dataset_sim:
-                self.dataset_sim[sim] = 0
-            self.dataset_sim[sim] += doc.similarity_values[sim]
-
         return (top_n, candidate_set)
 
     def extract_kp_from_corpus(self, corpus, dataset: str = "DUC", 
@@ -79,7 +71,10 @@ class EmbedRank(BaseKPModel):
 
         res = [self.extract_kp_from_doc(doc[0], top_n, min_len, stemmer, lemmer, **kwargs) for doc in corpus]
 
-        with open(f'C:\\Users\\artur\\Desktop\\stuff\\IST\\Thesis\\Code\\KP_Extraction\\evaluation\\results\\histograms\\{dataset}_{self.__class__.__name__}.json', "w") as out:
-            json.dump(self.dataset_sim, out)
+        #with open(f'C:\\Users\\artur\\Desktop\\stuff\\IST\\Thesis\\Code\\KP_Extraction\\evaluation\\results\\histograms\\{dataset}_{self.__class__.__name__}_all-cands.json', "w") as out:
+        #    json.dump(self.dataset_sim, out)
+
+        #with open(f'C:\\Users\\artur\\Desktop\\stuff\\IST\\Thesis\\Code\\KP_Extraction\\evaluation\\results\\histograms\\{dataset}_{self.__class__.__name__}_top-cands.json', "w") as out:
+        #    json.dump(self.top_cand_sims, out)
 
         return res

@@ -2,16 +2,18 @@ from typing import List, Tuple, Set
 from models.pre_processing import post_processing_utils
 from nltk.stem import PorterStemmer
 
+
 from datasets.process_datasets import *
 
 from models.base_KP_model import BaseKPModel
-from models.mdembedrank.mdembedrank_document_abstraction import Document
+from models.embedrank.embedrank_model import EmbedRank
+from models.embedrank.embedrank_document_abstraction import Document
 
 from models.pre_processing.language_mapping import choose_tagger, choose_lemmatizer
 from models.pre_processing.pos_tagging import POS_tagger_spacy
 from models.pre_processing.pre_processing_utils import remove_punctuation, remove_whitespaces
 
-class MDEmbedRank(BaseKPModel):
+class MDKPERank(BaseKPModel):
     """
     Simple class to encapsulate EmbedRank functionality. Uses
     the KeyBert backend to retrieve models
@@ -41,6 +43,9 @@ class MDEmbedRank(BaseKPModel):
         """
 
         doc = Document(doc, self.counter)
+        
+        #TODO: Remove
+        #print(doc.raw_text)
 
         doc.pos_tag(self.tagger, False if "pos_tag_memory" not in kwargs else kwargs["pos_tag_memory"], self.counter)
         doc.extract_candidates(min_len, self.grammar, lemmer)
@@ -52,18 +57,6 @@ class MDEmbedRank(BaseKPModel):
         torch.cuda.empty_cache()
 
         return (top_n, candidate_set)
-
-    def extract_kp_from_topic(self, topic, dataset: str = "DUC", 
-    top_n: int = 15, min_len: int = 5, stemmer: bool = False, lemmer: bool = False, **kwargs) -> List[List[Tuple]]:
-        doc_res = [self.extract_kp_from_doc(doc[0], -1, min_len, stemmer, lemmer, **kwargs) for doc in topic]
-        print(doc_res[0])
-
-        candidate_set = {}
-        top_n = {}
-
-        quit()
-
-        return res
 
     def extract_kp_from_corpus(self, corpus, dataset: str = "DUC", 
     top_n: int = 15, min_len: int = 5, stemming: bool = False, lemmatize: bool = False, **kwargs) -> List[List[Tuple]]:
@@ -77,4 +70,6 @@ class MDEmbedRank(BaseKPModel):
         stemmer = PorterStemmer() if stemming else None
         lemmer = choose_lemmatizer(dataset) if lemmatize else None
 
-        return [self.extract_kp_from_topic(topic, top_n, min_len, stemmer, lemmer, **kwargs) for topic in corpus]
+        res = [self.extract_kp_from_doc(doc[0], top_n, min_len, stemmer, lemmer, **kwargs) for doc in corpus]
+
+        return res

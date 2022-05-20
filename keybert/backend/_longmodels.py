@@ -7,7 +7,7 @@ import torch
 from typing import Callable
 from transformers import BigBirdModel, BigBirdConfig
 from transformers  import LongformerSelfAttention, LongformerConfig, LongformerModel, LongformerTokenizerFast
-from transformers import XLMRobertaTokenizer, XLMRobertaModel, XLMRobertaConfig
+from transformers import XLMRobertaTokenizer, XLMRobertaModel, XLMRobertaConfig, AutoModel, AutoTokenizer
 from transformers import RobertaForMaskedLM, RobertaTokenizerFast
 from transformers import logging
 from keybert.backend._utils import select_backend
@@ -137,10 +137,18 @@ def load_longmodel(embedding_model : str = "") -> Callable:
     attention_window = 512
     max_pos = 4096
 
+    if embedding_model == "longformer-large-4096":
+        model = select_backend("paraphrase-multilingual-mpnet-base-v2")
+        model.embedding_model._modules['0']._modules['auto_model'] = LongformerModel.from_pretrained("allenai/longformer-large-4096")
+        model.embedding_model.tokenizer = LongformerTokenizerFast.from_pretrained("allenai/longformer-large-4096")
+        model.embedding_model._modules['0']._modules['auto_model'].config = LongformerConfig.from_pretrained("allenai/longformer-large-4096")
+        return model 
+
     if not os.path.exists(model_path):
         supported_models[sliced_t](sliced_m, model_path, attention_window, max_pos)
 
     callable_model = select_backend(sliced_m)
+
 
     if sliced_t == "longformer":
         callable_model.embedding_model._modules['0']._modules['auto_model'] = XLMRobertaModel.from_pretrained(model_path, output_loading_info = False,  output_hidden_states = True, output_attentions=True)
