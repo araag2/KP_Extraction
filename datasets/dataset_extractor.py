@@ -18,6 +18,8 @@ from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfparser import PDFParser
 
+from tqdm import tqdm
+
 def map_orig_links(dir_input : str, dir_output : str) -> None:
     with open(dir_input, 'r', encoding='utf-8') as file:
         id_types = ["DOI", "PMID", "ISSN", "Web", "Other"]
@@ -54,7 +56,7 @@ def extract_files_from_link(dir_input : str, dir_output : str) -> None:
             print(f'{type} = {len(doc_ids[type])} entries')
 
         paper_type = "doi"
-        for entry in sorted(doc_ids["DOI"]):
+        for entry in tqdm(sorted(doc_ids["DOI"])):
             name = re.sub("[\./]", "-", entry)
             file_path = f'{output}{name}.pdf'
 
@@ -74,23 +76,6 @@ def extract_files_from_link(dir_input : str, dir_output : str) -> None:
     
 
     print(f'Found {c_f} files in total')
-
-    #csvreader = csv.reader(file)
-    #doi_ids = set()
-
-    #for row in csvreader:
-    #    if row[0] not in doi_ids:
-    #        doi_ids.add(row[0])
-    #        #if row[0][0:4] == "http":
-    #        #    print(row[0] + '\n')
-
-    #with open(dest_path, 'w') as output:
-    #    for key in sorted(doi_ids):
-    #        try:
-    #            output.write(f'{key}\n')
-
-    #        except UnicodeEncodeError:
-    #            print(key)
 
 def pdf_to_txt():
     pdf_source = "./raw_data/ResisBank/src/documents/pdfs/"
@@ -136,25 +121,15 @@ def pdf_to_txt():
             n_docs = len(stemmed_dic)
             json.dump(stemmed_dic, ref_file_stem)
 
-
     print(f'Dataset Statistics:\nN_docs = {n_docs}\nAvg word count = {word_count/n_docs:.3}\nAvg kp = {kp_count/n_docs:.1}')
 
-    #with open(f'test-s.json', 'w', encoding='utf-8') as ref_file:
-    #    with open(f'test-stem.json', 'w', encoding='utf-8') as ref_file_stem:
-    #
-    #        ref_files = {}
-    #        for pdf in os.listdir(pdf_source):
-    #            ref_files[pdf[:-4]] = [[""],[""],[""],[""],[""]]
-    #
-    #        json.dump(ref_files, ref_file, indent=4, separators=(',', ': '))
-    #        json.dump(ref_files, ref_file_stem)
+if __name__ == '__main__':
+    csv_path = "\\raw_data\\ResisBank\\src\\ResisBank_bank.csv"
+    raw_path = "\\raw_data\\ResisBank\\src\\ResisBank_dict_ID_dump"
+    dict_path = "\\raw_data\\ResisBank\\src\\ResisBank_dict_ID_dump"
+    out_path = "\\raw_data\\ResisBank\\src\\ResisBank_PMID_ID_dump"
+    pdf_path = "\\raw_data\\ResisBank\\src\\pdfs\\PMID\\"
 
-csv_path = "\\raw_data\\ResisBank\\src\\ResisBank_bank.csv"
-raw_path = "\\raw_data\\ResisBank\\src\\ResisBank_dict_ID_dump"
-dict_path = "\\raw_data\\ResisBank\\src\\ResisBank_dict_ID_dump"
-out_path = "\\raw_data\\ResisBank\\src\\ResisBank_PMID_ID_dump"
-pdf_path = "\\raw_data\\ResisBank\\src\\pdfs\\PMID\\"
-
-pdf_to_txt()
-#extract_files_from_link(f'{os. getcwd()}{dict_path}', f'{os. getcwd()}{out_path}')
-#map_orig_links(f'{os. getcwd()}{txt_path}', "\\raw_data\\ResisBank\\src\\ResisBank_dict_ID_dump.txt")
+    pdf_to_txt()
+    #extract_files_from_link(f'{os. getcwd()}{dict_path}', f'{os. getcwd()}{out_path}')
+    #map_orig_links(f'{os. getcwd()}{txt_path}', "\\raw_data\\ResisBank\\src\\ResisBank_dict_ID_dump.txt")

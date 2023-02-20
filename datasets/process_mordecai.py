@@ -1,7 +1,7 @@
 import json
 import plotly.express as px
-#from mordecai import Geoparser
-
+from mordecai import Geoparser
+from tqdm import tqdm
 
 def process_MKDUC01():
 	parser = Geoparser()
@@ -28,7 +28,7 @@ def build_map():
 		for t in source:
 			for d in source[t]:
 				data_list = eval(source[t][d])
-				for entry in data_list:
+				for entry in tqdm(data_list):
 					if "geo" in entry:
 						res["geo_loc"].append((float(entry["geo"]["lat"]), float(entry["geo"]["lon"])))
 
@@ -53,5 +53,6 @@ def build_map():
 		#fig.data[0].marker = dict(size = 5, color="red")
 		fig.show()
 
-#process_MKDUC01()
-build_map()
+if __name__ == '__main__':
+	#process_MKDUC01()
+	build_map()
