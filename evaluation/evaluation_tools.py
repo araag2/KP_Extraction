@@ -101,15 +101,6 @@ def evaluate_kp_extraction(model_results : Dict[str, List] = {}, true_labels: Di
             r = min(1.0, len([kp for kp in candidates if kp in true_label]) / len_true_label)
             f1 = 0.0
 
-            #TODO: Remove me
-            wrong_results = []
-            for kp in true_label:
-                if kp not in candidates:
-                    wrong_results.append(kp)
-            #print(f'doc {i} missed kp: {wrong_results}')
-            print(f'GT of document {i}: {true_label}')
-
-
             if p != 0 and r != 0:
                 f1 = ( 2.0 * p * r ) / ( p + r)
 
@@ -121,7 +112,7 @@ def evaluate_kp_extraction(model_results : Dict[str, List] = {}, true_labels: Di
             # Precision_k, Recall_k, F1-Score_k, MAP and nDCG for KP 
                 for k in k_set:
                     p_k = min(1.0, len([kp for kp in top_kp[:k] if kp in true_label]) / float(len(top_kp[:k])))
-                    r_k = min(1.0, len([kp for kp in top_kp[:k] if kp in true_label]) / len_true_label)
+                    r_k = min(1.0, (len([kp for kp in top_kp[:k] if kp in true_label])  / len_true_label))
                     f1_k = 0.0
 
                     if p_k != 0 and r_k != 0:
@@ -162,32 +153,13 @@ def evaluate_kp_extraction(model_results : Dict[str, List] = {}, true_labels: Di
         with open(f'{RESULT_DIR}/raw/{stamp} raw.txt', "a") as f:
             f.write(res.rstrip())
 
-        #measures = {'F1_5', 'F1_10', 'F1_15'}
-        #for m in measures:
-        #    with open(f'{RESULT_DIR}/struct/{stamp} {m}.txt', "a") as f2:
-        #        for ele in results_kp[m]:
-        #            f2.write(f'{ele*100:.3f}\n')
-                    
-        #write_to_file(f'{RESULT_DIR}/struct/{stamp}', res_dic)
-
     print(res)
     return
 
 def output_top_cands(model_results : Dict[str, List] = {}, true_labels: Dict[str, Tuple[List]] = {}):
-
-        # TODO: PRINT TO CHECK TOP CANDS PLZ DONT FORGET
         top_cand_l = []
         for dataset in model_results:
-            
             for i in range(len(model_results[dataset])):
                 top_kp = model_results[dataset][i][0]
                 true_label = true_labels[dataset][i]
                 top_cand_l += [round(float(kp[1]),2) for kp in top_kp if kp[0] in true_label]
-
-        top_cand_sims = {round(float(x),2) : (0 + top_cand_l.count(round(float(x),2))) for x in np.arange(0,1.01,0.01)}
-        #print(top_cand_sims)
-        with open(f'C:\\Users\\artur\\Desktop\\stuff\\IST\\Thesis\\Code\\KP_Extraction\\evaluation\\results\\histograms_raw\\{dataset}_EmbedRank_top-cands.json', "w") as out:
-            json.dump(top_cand_sims, out)
-
-        #print(top_cand_l)
-        #print(top_cand_sims)

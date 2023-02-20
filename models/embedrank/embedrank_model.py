@@ -12,6 +12,8 @@ from models.pre_processing.language_mapping import choose_tagger, choose_lemmati
 from models.pre_processing.pos_tagging import POS_tagger_spacy
 from models.pre_processing.pre_processing_utils import remove_punctuation, remove_whitespaces
 
+from tqdm import tqdm
+
 class EmbedRank(BaseKPModel):
     """
     Simple class to encapsulate EmbedRank functionality. Uses
@@ -35,6 +37,19 @@ class EmbedRank(BaseKPModel):
         doc = remove_punctuation(doc)
         return remove_whitespaces(doc)[1:]
 
+    def extract_mdkpe_embeds(self, txt, top_n, min_len, stemmer = None, lemmer = None, **kwargs) -> Tuple[List[Tuple], List[str]]:
+        doc = Document(txt, self.counter)
+        doc.pos_tag(self.tagger, False if "pos_tag_memory" not in kwargs else kwargs["pos_tag_memory"], self.counter)
+        doc.extract_candidates(min_len, self.grammar, lemmer)
+        
+        cand_embeds, candidate_set = doc.embed_n_candidates(self.model, min_len, stemmer, **kwargs)
+    
+        print(f'document {self.counter} processed\n')
+        self.counter += 1
+        torch.cuda.empty_cache()
+    
+        return (doc, cand_embeds, candidate_set)
+    
     def extract_kp_from_doc(self, doc, top_n, min_len, stemmer = None, lemmer = None, **kwargs) -> Tuple[List[Tuple], List[str]]:
         """
         Concrete method that extracts key-phrases from a given document, with optional arguments
@@ -42,9 +57,6 @@ class EmbedRank(BaseKPModel):
         """
 
         doc = Document(doc, self.counter)
-        
-        #TODO: Remove
-        #print(doc.raw_text)
 
         doc.pos_tag(self.tagger, False if "pos_tag_memory" not in kwargs else kwargs["pos_tag_memory"], self.counter)
         doc.extract_candidates(min_len, self.grammar, lemmer)
@@ -69,12 +81,4 @@ class EmbedRank(BaseKPModel):
         stemmer = PorterStemmer() if stemming else None
         lemmer = choose_lemmatizer(dataset) if lemmatize else None
 
-        res = [self.extract_kp_from_doc(doc[0], top_n, min_len, stemmer, lemmer, **kwargs) for doc in corpus]
-
-        #with open(f'C:\\Users\\artur\\Desktop\\stuff\\IST\\Thesis\\Code\\KP_Extraction\\evaluation\\results\\histograms\\{dataset}_{self.__class__.__name__}_all-cands.json', "w") as out:
-        #    json.dump(self.dataset_sim, out)
-
-        #with open(f'C:\\Users\\artur\\Desktop\\stuff\\IST\\Thesis\\Code\\KP_Extraction\\evaluation\\results\\histograms\\{dataset}_{self.__class__.__name__}_top-cands.json', "w") as out:
-        #    json.dump(self.top_cand_sims, out)
-
-        return res
+        return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemmer, lemmer, **kwargs) for doc in tqdm(corpus)]

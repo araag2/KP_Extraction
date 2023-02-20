@@ -74,4 +74,4 @@ class CandidateExtract (BaseKPModel):
         Concrete method that extracts key-phrases from a list of given documents, with optional arguments
         relevant to its specific functionality
         """
-        return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemming, **kwargs) for doc in corpus]
+        return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemming, **kwargs) for doc in tqdm(corpus)]

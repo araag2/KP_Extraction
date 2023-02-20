@@ -21,14 +21,7 @@ class EmbeddingsMemory:
         for i in range(len(doc_sents_words)):
             sent = [self.stemmer.stem(word) for word in doc_sents_words[i] ] if stemming else doc_sents_words[i]
             doc_sents_words_embed.append(model.embed(sent))
-        
         write_to_file(save_dir, doc_sents_words_embed)
-        
-        # TODO: Add this as a safety valve later.
-        #memory = read_from_file(save_dir)
-        #for i in range(len(doc_sents_words_embed)):
-            #if not np.array_equiv(doc_sents_words_embed[i], memory[i]):
-                #print(f'ERROR in phrase {i}')
 
     def save_embeddings(self, dataset_obj, model, embeds, save_dir, tagger, stemming = False, start_index = 0):
         for dataset in dataset_obj.dataset_content:
@@ -37,7 +30,7 @@ class EmbeddingsMemory:
             if not os.path.isdir(dir):
                 os.mkdir(dir)
 
-            for i in range(start_index, len(dataset_obj.dataset_content[dataset])):
+            for i in tqdm(range(start_index, len(dataset_obj.dataset_content[dataset]))):
                 torch.cuda.empty_cache()
                 result_dir = f'{dir}{i}'
                 doc_sents_words = []

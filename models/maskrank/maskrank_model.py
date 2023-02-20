@@ -11,6 +11,8 @@ from models.pre_processing.language_mapping import choose_tagger, choose_lemmati
 from models.pre_processing.pos_tagging import POS_tagger_spacy
 from models.pre_processing.pre_processing_utils import remove_punctuation, remove_whitespaces
 
+from tqdm import tqdm
+
 class MaskRank(BaseKPModel):
     """
     Simple class to encapsulate MaskRank functionality. Uses
@@ -24,10 +26,6 @@ class MaskRank(BaseKPModel):
         {<PROPN|NOUN|ADJ>*<PROPN|NOUN>+<ADJ>*}"""
         self.counter = 0
 
-        #TODO: Remove
-        self.dataset_sim = {}
-        self.top_cand_sims = {}
-
     def update_tagger(self, dataset : str = "") -> None:
         self.tagger = POS_tagger_spacy(choose_tagger(dataset)) if choose_tagger(dataset) != self.tagger.name else self.tagger
 
@@ -37,6 +35,19 @@ class MaskRank(BaseKPModel):
         """
         doc = remove_punctuation(doc)
         return remove_whitespaces(doc)[1:]
+
+    def extract_mdkpe_embeds(self, txt, top_n, min_len, stemmer = None, lemmer = None, **kwargs) -> Tuple[List[Tuple], List[str]]:
+        doc = Document(txt, self.counter)
+        doc.pos_tag(self.tagger, False if "pos_tag_memory" not in kwargs else kwargs["pos_tag_memory"], self.counter)
+        doc.extract_candidates(min_len, self.grammar, lemmer)
+        
+        cand_embeds, candidate_set = doc.embed_n_candidates(self.model, min_len, stemmer, **kwargs)
+    
+        print(f'document {self.counter} processed\n')
+        self.counter += 1
+        torch.cuda.empty_cache()
+    
+        return (doc, cand_embeds, candidate_set)
 
     def extract_kp_from_doc(self, doc, top_n, min_len, stemmer = None, lemmer = None, **kwargs) -> Tuple[List[Tuple], List[str]]:
         """
@@ -53,18 +64,6 @@ class MaskRank(BaseKPModel):
         print(f'document {self.counter} processed\n')
         self.counter += 1
 
-        top_k = 15
-        for sim in sorted(doc.similarity_values, reverse=True):
-            if sim not in self.dataset_sim:
-                self.dataset_sim[sim] = 0
-            self.dataset_sim[sim] += doc.similarity_values[sim]
-
-            if top_k > 0: 
-                if sim not in self.top_cand_sims:
-                    self.top_cand_sims[sim] = 0
-                self.top_cand_sims[sim] += min(top_k, doc.similarity_values[sim])
-                top_k -= doc.similarity_values[sim]
-
         return (top_n, candidate_set)
 
     def extract_kp_from_corpus(self, corpus, dataset: str = "DUC", 
@@ -79,12 +78,4 @@ class MaskRank(BaseKPModel):
         stemer = None if not stemming else PorterStemmer()
         lemmer = None if not lemmatize else choose_lemmatizer(dataset)
 
-        res = [self.extract_kp_from_doc(doc[0], top_n, min_len, stemer, lemmer, **kwargs) for doc in corpus]
-
-        #with open(f'C:\\Users\\artur\\Desktop\\stuff\\IST\\Thesis\\Code\\KP_Extraction\\evaluation\\results\\histograms\\{dataset}_{self.__class__.__name__}_all-cands.json', "w") as out:
-        #    json.dump(self.dataset_sim, out)
-
-        #with open(f'C:\\Users\\artur\\Desktop\\stuff\\IST\\Thesis\\Code\\KP_Extraction\\evaluation\\results\\histograms\\{dataset}_{self.__class__.__name__}_top-cands.json', "w") as out:
-        #    json.dump(self.top_cand_sims, out)
-
-        return res
+        return [self.extract_kp_from_doc(doc[0], top_n, min_len, stemer, lemmer, **kwargs) for doc in tqdm(corpus)]

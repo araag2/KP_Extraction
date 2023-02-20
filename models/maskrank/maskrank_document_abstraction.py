@@ -35,9 +35,6 @@ class Document:
         self.doc_sents = []
         self.id = id
 
-          #TODO: Remove
-        self.similarity_values = {}
-
     def pos_tag(self, tagger, memory, id):
         """
         Method that handles POS_tagging of an entire document, whilst storing it seperated by sentences
@@ -49,10 +46,18 @@ class Document:
         """
         Method that embeds the document.
         """
+        doc_info = model.embed_full(self.raw_text) # encode(documents, show_progress_bar=False, output_value = None)
 
-        return model.embed(stemmer.stem(self.raw_text)) if stemmer else model.embed(self.raw_text)
+        self.doc_token_ids = doc_info["input_ids"].squeeze().tolist()
+        self.doc_token_embeddings = doc_info["token_embeddings"]
+        self.doc_attention_mask = doc_info["attention_mask"]
 
-    def embed_candidates(self, model, stemmer : Callable = None, cand_mode: str = "MaskAll"):
+        return doc_info["sentence_embedding"].detach().numpy()
+
+    def embed_global(self, model):
+        pass
+
+    def embed_candidates(self, model, stemmer : Callable = None, cand_mode: str = "MaskAll", attention : str = ""):
         """
         Method that embeds the current candidate set, having several modes according to usage. 
             cand_mode
@@ -76,7 +81,10 @@ class Document:
 
                 for match in re.finditer(candidate, self.raw_text):
                     masked_text = f'{self.raw_text[:match.span()[0]]}<mask>{self.raw_text[match.span()[1]:]}'
-                    candidate_embeds.append(model.embed(masked_text))
+                    if attention == "global_attention":
+                        candidate_embeds.append(self.embed_global(masked_text))
+                    else:
+                        candidate_embeds.append(model.embed(masked_text))
                 self.candidate_set_embed.append(candidate_embeds)
 
         elif cand_mode == "MaskSubset":
@@ -134,6 +142,23 @@ class Document:
 
         self.candidate_set = list(candidate_set)
 
+    def embed_n_candidates(self, model, min_len, stemmer, **kwargs) -> List[Tuple]:
+        t = time.time()
+        self.doc_embed = self.embed_doc(model, stemmer)
+        print(f'Embed Doc = {time.time() -  t:.2f}')
+
+        t = time.time()
+        self.embed_candidates(model, stemmer, "MaskAll")
+        print(f'Embed Candidates = {time.time() -  t:.2f}')
+
+        return self.candidate_set_embed, self.candidate_set
+
+    def evaluate_n_candidates(self, candidate_set_embed, candidate_set) -> List[Tuple]:
+        doc_sim = np.absolute(cosine_similarity(candidate_set_embed, self.doc_embed.reshape(1, -1)))
+        candidate_score = sorted([(candidate_set[i], 1.0 - doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
+
+        return candidate_score, [candidate[0] for candidate in candidate_score]
+
     def top_n_candidates(self, model, top_n: int = 5, min_len : int = 5, stemmer : Callable = None, **kwargs) -> List[Tuple]:
 
         t = time.time()
@@ -141,7 +166,7 @@ class Document:
         print(f'Embed Doc = {time.time() -  t:.2f}')
 
         t = time.time()
-        self.embed_candidates(model, stemmer, "MaskAll" if ("cand_mode" not in kwargs or kwargs["cand_mode"] == "") else kwargs["cand_mode"])
+        self.embed_candidates(model, stemmer, "MaskAll" if ("cand_mode" not in kwargs or kwargs["cand_mode"] == "") else kwargs["cand_mode"], "global_attention" if "global_attention" in kwargs else "")
         print(f'Embed Candidates = {time.time() -  t:.2f}')
 
         doc_sim = []
@@ -155,13 +180,6 @@ class Document:
                     doc_sim.append([np.ndarray.min(np.absolute(cosine_similarity(mask_cand_occur, doc_embed)))])
                 else:
                     doc_sim.append([1.0])
-
-        #TODO: Remove
-        for cand in doc_sim:
-            r_sim = str(round(1.01-cand[0], 2))
-            if r_sim not in self.similarity_values:
-                self.similarity_values[r_sim] = 0
-            self.similarity_values[r_sim] += 1
 
         candidate_score = sorted([(self.candidate_set[i], 1.0 - doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
 

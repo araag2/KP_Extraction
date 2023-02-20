@@ -11,8 +11,6 @@ class BaseKPModel:
     def __init__(self, model):
         if model != "":
             self.model = select_backend(model)
-            #if model == "paraphrase-multilingual-mpnet-base-v2":
-            #    self.model.max_seq_length = 512
         self.name = "{}_{}".format(str(self.__str__).split()[3], re.sub("-", "_",model))
 
     def pre_process(self, doc) -> str:

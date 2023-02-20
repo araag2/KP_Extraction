@@ -50,9 +50,7 @@ class Document:
         self.token_ids = []
         self.token_embeddings = []
         self.attention_mask = []
-
-        #TODO: Remove
-        self.similarity_values = {}
+        self.candidate_mention = {}
 
     def pos_tag(self, tagger, memory, id):
         """
@@ -63,7 +61,6 @@ class Document:
 
     def embed_sents_words(self, model, stemmer : Callable = None, memory = False):
         if not memory:
-            # Code to store words per sentence
             self.doc_sents_words_embed = []
 
             for i in range(len(self.doc_sents_words)):
@@ -86,6 +83,9 @@ class Document:
 
         return doc_info["sentence_embedding"].detach().numpy()
 
+    def global_embed_doc(self, model):
+        pass
+
     def embed_candidates(self, model, stemmer : Callable = None, cand_mode: str = "", post_processing : List[str] = []):
         """
         Method that embeds the current candidate set, having several modes according to usage. 
@@ -93,35 +93,31 @@ class Document:
         """
         self.candidate_set_embed = []
 
-        #line_sum = [torch.sum(head, dim=0).tolist() for head in self.attention_matrix]
-        #line_attention = list(map(sum, zip(*line_sum)))
-
         for candidate in self.candidate_set:
-        #    candidate_embeds = []
-        #    
-        #    for mention in self.candidate_mentions[candidate]:
-        #        tokenized_candidate = tokenize_hf(mention, model)
-        #        filt_ids = filter_ids(tokenized_candidate['input_ids'])
-        #        
-        #        cand_len = len(filt_ids)
-        #    
-        #        for i in range(len(self.doc_token_ids)):
-        #            if filt_ids[0] == self.doc_token_ids[i] and filt_ids == self.doc_token_ids[i:i+cand_len]:
-        #                #candidate_embeds.append(mean_pooling(self.doc_token_embeddings[i:i+cand_len].unsqueeze(0), self.doc_attention_mask[i:i+cand_len]).detach().numpy()[0])
-        #                candidate_embeds.append(np.mean(self.doc_token_embeddings[i:i+cand_len].detach().numpy(), 0))
-        #    
-        #    if candidate_embeds == []:    
-        #        self.candidate_set_embed.append(model.embed(candidate))
-        #    
-        #    else:
-        #        self.candidate_set_embed.append(np.mean(candidate_embeds, 0))
-        
-            #TODO: Remove
-            self.candidate_set_embed.append(model.embed(candidate))
+            candidate_embeds = []
+            
+            for mention in self.candidate_mention[candidate]:
+                tokenized_candidate = tokenize_hf(mention, model)
+                filt_ids = filter_ids(tokenized_candidate['input_ids'])
+                
+                cand_len = len(filt_ids)
+            
+                for i in range(len(self.doc_token_ids)):
+                    if filt_ids[0] == self.doc_token_ids[i] and filt_ids == self.doc_token_ids[i:i+cand_len]:
+                        candidate_embeds.append(np.mean(self.doc_token_embeddings[i:i+cand_len].detach().numpy(), 0))
+
+                        if cand_mode == "global_attention":
+                            for j in range(i, i+cand_len): 
+                                self.doc_attention_mask[j] = 1
+            
+            if candidate_embeds == []:    
+                self.candidate_set_embed.append(model.embed(candidate))
+            
+            else:
+                self.candidate_set_embed.append(np.mean(candidate_embeds, 0))
 
         if "z_score" in post_processing:
             self.candidate_set_embed = z_score_normalization(self.candidate_set_embed, self.raw_text, model)
-
 
     def extract_candidates(self, min_len : int = 5, grammar : str = "", lemmer : Callable = None):
         """
@@ -141,7 +137,6 @@ class Document:
 
             for candidate in temp_cand_set:
                 if len(candidate) > min_len and len(candidate.split(" ")) <= 5:
-                    #candidate = re.sub(r'([a-zA-Z0-9\-]+)-([a-zA-Z0-9\-]+)', r'\1 - \2', candidate)
                     l_candidate = " ".join([simplemma.lemmatize(w, lemmer) for w in simplemma.simple_tokenizer(candidate)]).lower() if lemmer else candidate
                     if l_candidate not in self.candidate_set:
                         self.candidate_set.add(l_candidate)
@@ -152,6 +147,31 @@ class Document:
                     self.candidate_mentions[l_candidate].append(candidate)
 
         self.candidate_set = sorted(list(self.candidate_set), key=len, reverse=True)
+
+    def embed_n_candidates(self, model, min_len, stemmer, **kwargs) -> List[Tuple]:
+        doc_mode = "" 
+        cand_mode = "global_attention" if "global_attention" in kwargs else ""
+        post_processing = [""] 
+
+        t = time.time()
+        self.doc_embed = self.embed_doc(model, stemmer, doc_mode, post_processing)
+        print(f'Embed Doc = {time.time() -  t:.2f}')
+
+        t = time.time()
+        self.embed_candidates(model, stemmer, cand_mode, post_processing)
+        print(f'Embed Candidates = {time.time() -  t:.2f}')
+
+        if cand_mode == "global_attention":
+            self.doc_embed = self.global_embed_doc(model)
+
+        return self.candidate_set_embed, self.candidate_set
+
+    def evaluate_n_candidates(self, candidate_set_embed, candidate_set) -> List[Tuple]:
+        doc_sim = np.absolute(cosine_similarity(candidate_set_embed, self.doc_embed.reshape(1, -1)))
+        candidate_score = sorted([(candidate_set[i], doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
+
+        return candidate_score, [candidate[0] for candidate in candidate_score]
+
 
     def top_n_candidates(self, model, top_n: int = 5, min_len : int = 5, stemmer : Callable = None, **kwargs) -> List[Tuple]:
        
@@ -173,20 +193,11 @@ class Document:
         doc_sim = []
         if "MMR" not in kwargs:
             doc_sim = np.absolute(cosine_similarity(self.candidate_set_embed, self.doc_embed.reshape(1, -1)))
-
-            #TODO: Remove
-            for cand in doc_sim:
-                r_sim = str(round(cand[0], 2))
-                if r_sim not in self.similarity_values:
-                    self.similarity_values[r_sim] = 0
-                self.similarity_values[r_sim] += 1
-
         else:
             n = len(self.candidate_set) if len(self.candidate_set) < top_n else top_n
             doc_sim = mmr(self.doc_embed.reshape(1, -1), self.candidate_set_embed, self.candidate_set, n, kwargs["MMR"])
 
         candidate_score = sorted([(self.candidate_set[i], doc_sim[i][0]) for i in range(len(doc_sim))], reverse= True, key= lambda x: x[1])
-        self.attention_matrix = None
 
         if top_n == -1:
             return candidate_score, [candidate[0] for candidate in candidate_score]
